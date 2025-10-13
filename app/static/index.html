@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>DataBy AI — Agent Window</title>
+  <style>
+    :root {
+      --brand-color: #28BFD1;
+      --brand-color-light-1: #6FE4F0;
+      --brand-color-light-2: #A8F6FB; /* soft glassy cyan */
+      --brand-color-light-3: #D6FAFC; /* pale aqua tint */
+      --brand-color-dark-1: #148A99;
+      --brand-color-dark-2: #0F6C77;
+      --brand-color-dark-3: #094E55;
+      --bg: #021018;
+      --fg: var(--brand-color-light-3);
+      --error: #ff5e56;
+      --warn: #ffb997;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      background: radial-gradient(circle at 30% 30%, #072029 0%, #010b10 85%);
+      color: var(--fg);
+      font-family: "JetBrains Mono", monospace;
+      overflow: hidden;
+    }
+
+    /* --- ORB CONTAINER --- */
+    .orb-container {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 40vh;
+    }
+
+    /* --- FUTURISTIC ORB --- */
+    .orb {
+      position: relative;
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 30% 30%, var(--brand-color-light-2) 0%, var(--brand-color-dark-2) 90%);
+      box-shadow:
+        0 0 25px var(--brand-color-light-1),
+        0 0 80px 10px rgba(40, 191, 209, 0.35),
+        inset 0 0 20px rgba(255,255,255,0.1);
+      overflow: hidden;
+      animation: orbPulse 4s infinite ease-in-out;
+    }
+
+    .orb::before, .orb::after {
+      content: "";
+      position: absolute;
+      inset: -20%;
+      border-radius: 50%;
+      border: 1px solid rgba(168, 246, 251, 0.35);
+      animation: rotateRing 10s linear infinite;
+    }
+
+    .orb::after {
+      border-color: rgba(111, 228, 240, 0.25);
+      animation-direction: reverse;
+      filter: blur(2px);
+    }
+
+    .orb .core {
+      position: absolute;
+      inset: 10%;
+      border-radius: 50%;
+      background: conic-gradient(
+        from 180deg,
+        rgba(255,255,255,0.05),
+        var(--brand-color-light-1),
+        rgba(255,255,255,0.05)
+      );
+      animation: rotateCore 8s linear infinite;
+      filter: blur(3px);
+    }
+
+    @keyframes orbPulse {
+      0%, 100% {
+        transform: scale(1);
+        box-shadow:
+          0 0 35px var(--brand-color-light-1),
+          0 0 90px 20px rgba(40, 191, 209, 0.35);
+      }
+      50% {
+        transform: scale(1.1);
+        box-shadow:
+          0 0 70px var(--brand-color-light-2),
+          0 0 130px 30px rgba(40, 191, 209, 0.5);
+      }
+    }
+
+    @keyframes rotateRing {
+      to { transform: rotate(360deg); }
+    }
+
+    @keyframes rotateCore {
+      to { transform: rotate(-360deg); }
+    }
+
+    .waiting-text {
+      margin-top: 1.5rem;
+      font-size: 1rem;
+      color: var(--brand-color-light-2);
+      opacity: 0.85;
+      letter-spacing: 0.15rem;
+      text-shadow: 0 0 10px var(--brand-color-light-1);
+      animation: blink 2s infinite;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 0.6; }
+      50% { opacity: 1; }
+    }
+
+    /* --- STREAM BOX --- */
+    #stream-box {
+      position: fixed;
+      top: 1rem;
+      right: 1rem;
+      width: 280px;
+      height: 220px;
+      background: rgba(10, 40, 50, 0.55);
+      border: 1px solid rgba(111, 228, 240, 0.3);
+      border-radius: 10px;
+      padding: 0.5rem 0.8rem;
+      font-size: 0.8rem;
+      overflow-y: auto;
+      box-shadow: 0 0 25px rgba(40, 191, 209, 0.25);
+      backdrop-filter: blur(10px);
+    }
+
+    #stream-box h3 {
+      margin: 0 0 0.5rem 0;
+      font-size: 0.9rem;
+      color: var(--brand-color-light-1);
+      text-align: center;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      padding-bottom: 0.3rem;
+    }
+
+    .log-line {
+      margin-bottom: 0.4rem;
+      opacity: 0;
+      transform: translateY(10px);
+      animation: fadeIn 0.3s ease forwards;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .log-line::before {
+      content: "▎";
+      color: var(--brand-color);
+      margin-right: 8px;
+      opacity: 0.6;
+    }
+
+    @keyframes fadeIn {
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    footer {
+      position: fixed;
+      bottom: 0.8rem;
+      left: 50%;
+      transform: translateX(-50%);
+      color: var(--brand-color-light-2);
+      font-size: 0.85rem;
+      opacity: 0.6;
+    }
+
+    .status {
+      position: fixed;
+      bottom: 1rem;
+      right: 2rem;
+      background: var(--brand-color-dark-2);
+      color: var(--brand-color-light-3);
+      padding: 0.6rem 1rem;
+      border-radius: 8px;
+      border: 1px solid var(--brand-color);
+      box-shadow: 0 0 12px rgba(40, 191, 209, 0.3);
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      backdrop-filter: blur(6px);
+    }
+
+    .status.error {
+      background: var(--error);
+      color: #fff;
+      box-shadow: 0 0 15px var(--error);
+    }
+
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-thumb {
+      background: var(--brand-color);
+      border-radius: 3px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="orb-container">
+    <div class="orb"></div>
+    <div class="waiting-text">Waiting for user . . .</div>
+  </div>
+
+  <footer>Gaby’s Window</footer>
+
+  <div id="stream-box">
+    <h3>Stream Log</h3>
+  </div>
+
+  <div id="status" class="status">🟢 Connected</div>
+
+  <script>
+    const logBox = document.getElementById("stream-box");
+    const status = document.getElementById("status");
+    const source = new EventSource("/agent-window/stream");
+
+    source.onmessage = (event) => {
+      const line = document.createElement("div");
+      line.className = "log-line";
+      line.textContent = event.data;
+      logBox.appendChild(line);
+      logBox.scrollTop = logBox.scrollHeight;
+    };
+
+    source.onerror = () => {
+      status.textContent = "🔴 Disconnected — retrying...";
+      status.classList.add("error");
+      setTimeout(() => {
+        status.classList.remove("error");
+        status.textContent = "🟡 Reconnecting...";
+      }, 3000);
+    };
+
+    source.onopen = () => {
+      status.textContent = "🟢 Connected";
+      status.classList.remove("error");
+    };
+  </script>
+</body>
+</html>

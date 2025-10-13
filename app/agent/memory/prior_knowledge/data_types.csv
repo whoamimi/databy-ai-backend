@@ -1,0 +1,13 @@
+continuous,binary_label,multi_label,ordinal,long_text,short_text
+12.5,1,"1;2",1,"This is a long text example that describes something in detail.","short text"
+7.8,0,"3;4",2,"Another long text example with more information.","text"
+15.2,1,"1;3",3,"Yet another example of long text for testing purposes.","sample"
+9.6,0,"2;4",4,"This long text is used to test the dataset.","data"
+20.3,1,"1;4;5",5,"A detailed paragraph that simulates product reviews and feedback.","review"
+5.4,0,"2",1,"Short but slightly descriptive sentence for testing binary patterns.","note"
+18.7,1,"3;5",2,"Exploratory text about dataset generation and machine learning context.","context"
+10.1,0,"4",3,"Example long string that discusses customer satisfaction levels.","survey"
+22.9,1,"1;2;3",4,"Extended text for classification and NLP experiments on ordinal encoding.","experiment"
+6.3,0,"5",5,"Random filler sentence used for control testing of pipelines.","check"
+13.8,1,"2;3;4",2,"Discussion text for understanding multi-label encoded samples.","labels"
+8.2,0,"1",3,"Simulated entry where short field only contains concise identifiers.","id"

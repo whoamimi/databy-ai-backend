@@ -1,0 +1,83 @@
+[project]
+name = "databy"
+version = "0.1.0"
+description = "Autonomous AI agent for end-to-end lifecycle management."
+readme = "README.md"
+authors = [
+  {name = "Mimi Phan", email = "phan.mimi@outlook.com"}
+]
+license = "MIT"
+dependencies = [
+  "typer>=0.9.0",
+  "fastapi>=0.104.0",
+  "uvicorn[standard]>=0.24.0",
+  "pydantic-settings>=2.0.0",
+  "python-dotenv>=1.0.0",
+  "markdown>=3.5.0",
+  "jinja2>=3.1.0",
+  "pandas>=2.0.0",
+  "ollama>=0.1.0"
+]
+requires-python = ">= 3.10"
+
+[project.optional-dependencies]
+test = [
+    "coverage>=7.0.0",
+    "pytest>=7.0.0",
+    "pytest-asyncio>=0.21.0",
+    "pytest-cov>=4.0.0",
+    "ruff>=0.1.0",
+    "ty>=0.3.0",
+    "ipdb>=0.13.0",
+]
+dev = [
+    "pre-commit>=3.0.0",
+    "black>=23.0.0",
+    "mypy>=1.0.0",
+    "httpx>=0.25.0",  # for testing async clients
+]
+
+[project.urls]
+bugs = "https://github.com/whoamimi/databy/issues"
+changelog = "https://github.com/whoamimi/databy/blob/master/changelog.md"
+homepage = "https://github.com/whoamimi/databy"
+
+[project.scripts]
+databy = "app.cli:app"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["app*"]
+
+[tool.ty]
+# All rules are enabled as "error" by default; no need to specify unless overriding.
+# Example override: relax a rule for the entire project (uncomment if needed).
+# rules.TY015 = "warn"  # For invalid-argument-type, warn instead of error.
+
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # Pyflakes
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "UP",  # pyupgrade
+]
+
+[tool.ruff.lint.pyupgrade]
+# Preserve types, even if a file imports `from __future__ import annotations`.
+keep-runtime-typing = true
+
+[tool.coverage.run]
+source = ["app"]
+dynamic_context = "test_function"
+
+[tool.coverage.report]
+show_missing = true
+sort = "-Cover"
+
+[tool.coverage.html]
+show_contexts = true
