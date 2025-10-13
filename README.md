@@ -5,14 +5,28 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 
-> **Autonomous AI agent for complete data lifecycle management** - From raw data ingestion to actionable insights, fully automated.
+> **Autonomous AI agent for complete data lifecycle management** DataBy AI is an intelligent, autonomous agent system designed to handle the complete data processing lifecycle without human intervention. Built with FastAPI and powered by modern AI models and swarms to faciliate main agent, Gaby who is responsible for providing end-to-end data solutions through both REST API and real-time WebSocket interfaces.
+
+## Backend Intent
+
+This backend is designed with the needs of a solo developer in mind as an IAAS business platform, hence, this backend should support:
+
+- External / Internal Platform User Authentication Reroutes.
+- Gaby AI Agent Live Broadcasting Websocket.
+- Database Platform connection & integrations.
+- AI/ML/Data Science Life cycle managers and pipelines.
+- Unifies all operating Agent's servers (e.g. sandbox).
 
 ## Table of Contents
 
 - [DataBy AI - Autonomous Data Agent](#databy-ai---autonomous-data-agent)
+  - [Backend Intent](#backend-intent)
   - [Table of Contents](#table-of-contents)
-  - [Overview](#overview)
-  - [Architecture](#architecture)
+  - [Agent System](#agent-system)
+      - [Core Components](#core-components)
+      - [Pipeline Stages](#pipeline-stages)
+      - [Real-time Monitoring](#real-time-monitoring)
+  - [Project Directory Summary](#project-directory-summary)
   - [Quick Start](#quick-start)
     - [Prerequisites](#prerequisites)
     - [Installation](#installation)
@@ -25,26 +39,33 @@
     - [Setup Development Environment](#setup-development-environment)
     - [Running Tests](#running-tests)
     - [Code Quality](#code-quality)
-  - [Agent System](#agent-system)
-    - [Core Components](#core-components)
-    - [Pipeline Stages](#pipeline-stages)
-    - [Real-time Monitoring](#real-time-monitoring)
   - [API Reference](#api-reference)
   - [License](#license)
 
-## Overview
+## Agent System
 
-DataBy AI is an intelligent, autonomous agent system designed to handle the complete data analysis lifecycle without human intervention. Built with FastAPI and powered by modern AI models, it provides end-to-end data processing capabilities through both REST API and real-time WebSocket interfaces.
+#### Core Components
 
-The system automatically:
-- 🔍 **Explores** and analyzes data structure and quality
-- 🧹 **Cleans** and preprocesses datasets intelligently
-- 📊 **Analyzes** patterns and generates insights
-- 🤖 **Learns** from data to improve future processing
-- 📋 **Reports** findings in structured formats
-- ⚡ **Streams** real-time progress updates
+- **Cognitive Engine**: AI-powered decision making and strategy selection
+- **Pipeline Manager**: Orchestrates data processing workflows
+- **Heartbeat System**: Real-time status monitoring and health checks
+- **Memory System**: Stores knowledge and learns from past processing
 
-## Architecture
+#### Pipeline Stages
+
+1. **Data Exploration**: Structure analysis, type detection, basic statistics
+2. **Data Cleaning**: Data Cleaning procedures like missing data, anomalities and dedupes handling.
+3. **Data Insights & Analytics**: Structured findings and recommendations
+
+#### Real-time Monitoring
+
+The system provides real-time updates through WebSocket connections:
+- **Status Updates**: Current processing stage and progress
+- **Heartbeat Messages**: System health and performance metrics
+- **Error Notifications**: Detailed error context and recovery suggestions
+- **Completion Reports**: Final results and insights
+
+## Project Directory Summary
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -229,31 +250,6 @@ mypy app/
 # Lint code
 ruff check app/
 ```
-
-## Agent System
-
-### Core Components
-
-- **Cognitive Engine**: AI-powered decision making and strategy selection
-- **Pipeline Manager**: Orchestrates data processing workflows
-- **Heartbeat System**: Real-time status monitoring and health checks
-- **Memory System**: Stores knowledge and learns from past processing
-
-### Pipeline Stages
-
-1. **Data Exploration**: Structure analysis, type detection, basic statistics
-2. **Missing Data Analysis**: MCAR/MAR/MNAR classification and handling strategies
-3. **Data Cleaning**: Quality assessment, outlier detection, preprocessing
-4. **Statistical Analysis**: Descriptive statistics, pattern recognition, insights
-5. **Report Generation**: Structured findings and recommendations
-
-### Real-time Monitoring
-
-The system provides real-time updates through WebSocket connections:
-- **Status Updates**: Current processing stage and progress
-- **Heartbeat Messages**: System health and performance metrics
-- **Error Notifications**: Detailed error context and recovery suggestions
-- **Completion Reports**: Final results and insights
 
 ## API Reference
 
