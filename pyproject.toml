@@ -40,19 +40,14 @@ dev = [
 [project.urls]
 bugs = "https://github.com/whoamimi/databy/issues"
 changelog = "https://github.com/whoamimi/databy/blob/master/changelog.md"
-homepage = "https://github.com/whoamimi/databy"
+homepage = "https://github.com/whoamimi/databy-ai-backend"
 
 [project.scripts]
-databy = "app.cli:app"
+databy = "app.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["app*"]
-
-[tool.ty]
-# All rules are enabled as "error" by default; no need to specify unless overriding.
-# Example override: relax a rule for the entire project (uncomment if needed).
-# rules.TY015 = "warn"  # For invalid-argument-type, warn instead of error.
 
 [tool.ruff]
 line-length = 120

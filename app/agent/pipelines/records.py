@@ -18,7 +18,10 @@ DATA_SUMMARY_COLS = [
     'missing_ratio',
     'unique_count',
 ]
+
 DATA_SUMMARY_NEW_COLS = ['description']
+DATA_SUMMARY_TYPE_COLS = ["_data_types", "_data_num_types"]
+
 MIN_SAMPLE_SIZE = 25
 MAX_SAMPLE_SIZE = 300
 

@@ -2,9 +2,12 @@
 app/agent/pipelines/data_explorer.py
 
 Instruct Callers & helper functions during the data_explorer stage - initiation of any data cleaning session.
-TODO: Datatype changes handlers
+
+TODO: if time allows - change report tracer to Markdown + add utility function to convert markdown to tabular formatting.
 
 """
+
+from __future__ import annotations
 
 import ollama
 import pandas as pd
@@ -14,30 +17,65 @@ from ...utils.settings import settings
 from ..core.pipeline import ChainStage
 from ..core._db import PromptBuilder
 from ..core._skeleton import Spine
-from ..main import GabyAgent
-from .records import Session, DATA_SUMMARY_COLS, DATA_SUMMARY_NEW_COLS
+from .records import Session, DATA_SUMMARY_COLS, DATA_SUMMARY_NEW_COLS, MIN_SAMPLE_SIZE, DATA_SUMMARY_TYPE_COLS
 
 prompts = settings.agent.stack.prompts
 
 ##################### 1. RETRIEVE THE PROMPTS
+
 try:
     describePrompt = PromptBuilder(**prompts['describe_dataset'])
     metaPrompt = PromptBuilder(**prompts['dataset_meta_description'])
+    numericTypePrompt = PromptBuilder(**prompts["datatype_numeric"])
+    dataTypePrompt = PromptBuilder(**prompts["datatype"])
+
 except Exception as e:
     raise e
 
-
 ##################### 2. DEFINE THE PROMPT / INSTRUCT LLM CALLERS
 class DataSummary(Spine, model_name='base', prompt=describePrompt):
+    """Generates comprehensive dataset descriptions using LLM analysis."""
+
     def pre_process(self, data_summary: str):
+        """Formats data summary for LLM processing.
+
+        Args:
+            data_summary (str): Dataset summary in markdown format
+
+        Returns:
+            dict: Formatted data with 'data_table' key
+        """
         return {'data_table': data_summary }
 
 class DataMetaSummary(Spine, model_name='base', prompt=metaPrompt):
+    """Generates detailed descriptions for individual dataset columns."""
+
     def pre_process(self, data_sample: str, data_label: str):
+        """Formats column data for LLM analysis.
+
+        Args:
+            data_sample (str): Column values in markdown format
+            data_label (str): Column name
+
+        Returns:
+            dict: Formatted data with sample values and label
+        """
         return {'data_sample': data_sample, 'data_label': data_label}
 
     def run_loop(self, client: ollama.Client, description: str, data_sample: pd.DataFrame):
+        """Generates descriptions for all columns in the dataset.
 
+        Args:
+            client (ollama.Client): LLM client for inference
+            description (str): Overall dataset description
+            data_sample (pd.DataFrame): Sample data for analysis
+
+        Returns:
+            dict: Mapping of column names to descriptions
+
+        Raises:
+            Exception: Re-raises any processing errors
+        """
         meta: dict = {}
         try:
             for col_name in data_sample.columns:
@@ -53,15 +91,121 @@ class DataMetaSummary(Spine, model_name='base', prompt=metaPrompt):
         except Exception as e:
             raise e
 
+class NumericTyper(Spine, model_name="base", prompt=numericTypePrompt):
+    """Classifies numeric columns into semantic types (continuous, binary, ordinal, etc.)."""
+
+    def pre_process(self, **kwargs):
+        """Passes through input parameters without modification.
+
+        Args:
+            **kwargs: Column data and context
+
+        Returns:
+            dict: Input parameters unchanged
+        """
+        return kwargs
+
+    def post_process(self, response):
+        """Validates LLM response for numeric type classification.
+
+        Args:
+            response: Raw LLM response
+
+        Returns:
+            str: Processed response if valid
+
+        Raises:
+            ValueError: If response is not a valid numeric type
+        """
+        output = super().post_process(response)
+
+        if output.lower() not in ["continous", "binary", "multi", "ordinal", "nominal"]:
+            return output
+        else:
+            # TODO: before building the background error capturer to run in prod real-time, this should prompt the agent to retry output with different seed or reset caches
+            raise ValueError
+
+class DataTyper(Spine, model_name="base", prompt=dataTypePrompt):
+    """Classifies numeric columns into semantic types (continuous, binary, ordinal, etc.)."""
+
+    def pre_process(self, **kwargs):
+        """Passes through input parameters without modification.
+
+        Args:
+            **kwargs: Column data and context
+
+        Returns:
+            dict: Input parameters unchanged
+        """
+        return kwargs
+
+    def run_loop(self, client: ollama.Client, data_sample: pd.DataFrame):
+        """Generates Data types descriptors in summarizing datasets.
+
+        Args:
+            client (ollama.Client): LLM client for inference
+            data_sample (pd.DataFrame): Sample data for analysis
+
+        Returns:
+            dict: Mapping of column names to descriptions
+
+        Raises:
+            Exception: Re-raises any processing errors
+        """
+        numTyper = NumericTyper()
+        meta: dict = {}
+        meta_num: dict = {}
+
+        try:
+            for col_name in data_sample.columns:
+                inputs = {
+                        'data_label': col_name,
+                        'data_samples': data_sample[col_name].to_markdown(index=False)
+                    }
+
+                meta[col_name] = self.run(client=client, **inputs)
+
+                if meta[col_name] == "numeric":
+                    meta_num[col_name] = numTyper.run(client=client, **inputs)
+
+            return meta, meta_num
+        except Exception as e:
+            raise e
+
 ##################### OPTIONAL - for tidying the workflow. May be removed in the future.
+
 @dataclass(frozen=True)
 class DataExplorer:
+    """Container for data exploration components."""
+
     dataDescriber: DataSummary = field(default_factory=DataSummary)
     metaDescriber: DataMetaSummary = field(default_factory=DataMetaSummary)
 
+@dataclass(frozen=True):
+class DataDriller:
+    dataTyper: DataTyper = field(default_factory=DataTyper)
+
 ##################### 3. Define the Chain Pipeline. Throws an error if `forward` and `validate_stage_output` are not defined.
-class DefineDataset(ChainStage, DataExplorer):
-    def forward(self, agent: GabyAgent, session: Session):
+
+class DefineDataset(ChainStage):
+    """Initial pipeline stage that creates basic dataset statistics and summary."""
+
+    def forward(self, agent: "GabyAgent", session: Session): # pyright: ignore[reportUndefinedVariable]
+        """Creates comprehensive dataset summary with statistics.
+
+        Args:
+            agent (GabyAgent): Agent with LLM client and state
+            session (Session): Current session with dataset
+
+        Returns:
+            Result of next pipeline stage
+
+        Raises:
+            ValueError: If session.data_summary is None
+        """
+        if session.data_summary is None:
+            raise ValueError("Session Data Summary unavailable. Please define the data_summary in Session before proceeding to this stage.")
+
         # store original datatypes
         session.data_types = session.data.dtypes.to_dict()
         # create summary table
@@ -76,38 +220,133 @@ class DefineDataset(ChainStage, DataExplorer):
         return super().forward(agent, session)
 
     def validate_stage_output(self, session: Session):
+        """Validates required session attributes are present.
+
+        Args:
+            session (Session): Session to validate
+
+        Raises:
+            ValueError: If required attributes are None
+        """
         expected_records: list = ['data_summary', 'description']
+
         for attr in expected_records:
             if getattr(session, attr) is None:
                 raise ValueError(f'Attribute {attr} returned None and is expected to be completed at this stage. ')
 
 class DescribeDataset(ChainStage, DataExplorer):
-    def forward(self, agent: GabyAgent, session: Session):
+    """Second pipeline stage that generates LLM descriptions for dataset and columns."""
+
+    def forward(self, agent: "GabyAgent", session: Session): # pyright: ignore[reportUndefinedVariable]
+        """Generates dataset and field-level descriptions using LLM.
+
+        Args:
+            agent (GabyAgent): Agent with LLM client and state
+            session (Session): Session with data summary
+
+        Returns:
+            Result of next pipeline stage
+
+        Raises:
+            ValueError: If session.data_summary is None
+        """
+        if session.data_summary is None:
+            raise ValueError("Session Data Summary unavailable. Please define the data_summary in Session before proceeding to this stage.")
+
         # prompt-chain
         session.description = self.dataDescriber.run(agent.client, **{'data_summary': session.data_summary.to_markdown(index=False)})
 
         if isinstance(session.data_summary, pd.DataFrame):
-            meta_description: dict = self.metaDescriber.run_loop(agent.client, description=session.description, data_sample=session.data.head(MIN_SAMPLE_SIZE))
+            sample = session.data.head(MIN_SAMPLE_SIZE)
+
+            meta_description: dict = self.metaDescriber.run_loop(agent.client, description=session.description, data_sample=sample)
+
             session.data_summary["description"] = session.data_summary.data_field_name.map(meta_description)
 
         return super().forward(agent, session)
 
     def validate_stage_output(self, session: Session):
+        """Validates data summary contains expected columns.
+
+        Args:
+            session (Session): Session to validate
+
+        Raises:
+            ValueError: If columns don't match expected structure
+        """
         summary_cols: list = DATA_SUMMARY_COLS + DATA_SUMMARY_NEW_COLS
+
         if session.data_summary is not None:
             if set(session.data_summary.columns) != set(summary_cols):
                 missing = set(summary_cols) - set(session.data_summary.columns)
                 extra = set(session.data_summary.columns) - set(summary_cols)
+
                 raise ValueError(
                         f"Data summary columns mismatch. "
                         f"Missing: {list(missing) or 'None'}, Extra: {list(extra) or 'None'}"
                     )
 
-def setup_pipeline():
+class DataTyperStage(ChainStage, DataDriller):
+    """Pipeline stage for numeric type classification (placeholder implementation)."""
+
+    def forward(self, agent: "GabyAgent", session: Session): # type: ignore
+        """Execute numeric type classification.
+
+        Args:
+            agent (GabyAgent): Agent with LLM client and state
+            session (Session): Session with dataset
+        """
+
+        if isinstance(session.data_summary, pd.DataFrame):
+            sample = session.data.head(MIN_SAMPLE_SIZE)
+
+            dataTypes, dataNumTypes = self.dataTyper.run_loop(agent.client, data_sample=sample)
+
+            session.data_summary["_data_types"] = session.data_summary["data_field_name"].map(dataTypes)
+            session.data_summary["_data_num_types"] = session.data_summary["data_field_name"].map(dataNumTypes)
+
+        return super().forward(agent, session)
+
+    def validate_stage_output(self, session: Session):
+        """Validate numeric type classification results.
+
+        Args:
+            session (Session): Session to validate
+        """
+
+        if missing := [i for i in DATA_SUMMARY_TYPE_COLS if i not in session.data_summary.columns]: # type: ignore
+            raise ValueError(f"Error from running pipeline stage. Expected specific data_summary fields after this pipeline stage but detected missing fields: {missing}")
+
+class DataExplorerPipeline:
+    def __init__(self):
+        self.prompt = DataExplorer()
+        self.dataDescriber = DescribeDataset()
+        self.dataType = DataTyperStage()
+
+        self.reset()
+
+    def reset(self):
+        if not hasattr(self, 'pipe'):
+            self.pipe = DefineDataset()
+
+        self.pipe.set_next_stage(self.dataDescriber).set_next_stage(self.dataType)
+
+    def run(self, agent, session: Session):
+        return self.pipe.forward(agent, session)
+
+def demo_setup_pipeline():
+    """Creates the data exploration pipeline: DefineDataset -> DescribeDataset.
+
+    Returns:
+        Generator[DefineDataset]: First stage of the configured pipeline
+
+    TODO: Remove
+    """
     d1 = DefineDataset()
     d2 = DescribeDataset()
+    d3 = DataTyperStage()
 
-    d1.set_next_stage(d2)
+    d1.set_next_stage(d2).set_next_stage(d3)
     yield d1
 
 if __name__ == "__main__":

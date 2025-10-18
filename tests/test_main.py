@@ -9,14 +9,14 @@ from app.utils.settings import settings
 client = TestClient(app)
 
 TEST_ROOT_GET = {
-    "message": settings.API_TITLE,
-    "version": settings.API_VERSION,
-    "api_docs": settings.DOCS_URL,
-    "documentation": settings.docs_endpoint,
-}
+        "message": "Welcome to" + settings.app_title + "!",
+        "version": settings.app_version,
+        "documentation": settings.docs_endpoint
+    }
 
 def test_root_endpoint():
     """GET / should return metadata and API info."""
+
     response = client.get("/")
     assert response.status_code == 200
     assert response.json() == TEST_ROOT_GET, f"Root endpoint message unexpected output: {response.json()}"
@@ -24,6 +24,8 @@ def test_root_endpoint():
 
 def test_health_endpoint():
     """GET /health should confirm the service is alive."""
+
     response = client.get("/health")
+
     assert response.status_code == 200
     assert response.json() == {"status": "healthy", "service": "databy-ai"}

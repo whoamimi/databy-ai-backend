@@ -1,6 +1,9 @@
 """
 app/agent/core/heartbeat.py
 
+TODO:
+- run checks
+
 """
 
 from datetime import datetime
@@ -13,13 +16,9 @@ AGENT_STATE = {
 
 @dataclass
 class AgentStatus:
-    alive: bool = field(default=False)
-    state: str | None = field(default=None, init=False)
+    alive: bool = field(default=True)
+    state: str = field(default="idle", init=False)
     timestamp: datetime = field(init=False, default_factory=datetime.now)
-
-    def __post_init__(self):
-        if self.alive is False and self.state:
-            raise ValueError(f'Agent is not alive but state shows the agent is {self.state}. Revise the setup architecture.')
 
 class HeartMonitor(AgentStatus):
     @property

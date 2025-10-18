@@ -1,0 +1,93 @@
+# cli.yaml
+program:
+  name: databy
+  description: "🔧 DataBy CLI — DataBy AI Backend Server"
+
+commands:
+  serve:
+    help: "Start the DataBy API server"
+    func: serve
+    args:
+      host:
+        flags: ["--host", "-H"]
+        type: str
+        default: 127.0.0.1
+        help: "Host to bind to"
+      port:
+        flags: ["--port", "-p"]
+        type: int
+        default: 8000
+        help: "Port to bind to"
+      reload:
+        flags: ["--reload", "-r"]
+        action: store_true
+        help: "Enable auto-reload for development"
+      workers:
+        flags: ["--workers", "-w"]
+        type: int
+        help: "Number of worker processes"
+
+  test:
+    help: "Run dev tests / setup with coverage"
+    func: run_tests
+    args:
+      keyword:
+        flags: ["--keyword", "-k"]
+        type: str
+        help: "Run only tests matching keyword"
+
+  configure-agent-swamps:
+    help: "Iterates through the Agent's configured outbounds (servers) and validates all handshakes are active."
+    func: configure_agent_outbounds
+    args:
+      access_key:
+        flags: ["--access-key"]
+        type: str
+        help: "AWS Access Key ID"
+      secret_key:
+        flags: ["--secret-key"]
+        type: str
+        help: "AWS Secret Access Key"
+      region:
+        flags: ["--region"]
+        type: str
+        default: "ap-southeast-2"
+        help: "AWS Region name (default: ap-southeast-2)"
+
+  configure-aws:
+    help: "Configure AWS credentials and default region to run Sagemaker / Bedrock runs."
+    func: configure_aws
+    args:
+      access_key:
+        flags: ["--access-key"]
+        type: str
+        help: "AWS Access Key ID"
+      secret_key:
+        flags: ["--secret-key"]
+        type: str
+        help: "AWS Secret Access Key"
+      region:
+        flags: ["--region"]
+        type: str
+        default: "ap-southeast-2"
+        help: "AWS Region name (default: ap-southeast-2)"
+
+  configure-gcloud:
+    help: "Configure AWS credentials and default region to run Sagemaker / Bedrock runs."
+    func: configure_aws
+    args:
+      access_key:
+        flags: ["--access-key"]
+        type: str
+        help: "AWS Access Key ID"
+      secret_key:
+        flags: ["--secret-key"]
+        type: str
+        help: "AWS Secret Access Key"
+      region:
+        flags: ["--region"]
+        type: str
+        default: "ap-southeast-2"
+        help: "AWS Region name (default: ap-southeast-2)"
+
+default_command: null

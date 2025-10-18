@@ -42,7 +42,7 @@ def send_to_sandbox(script: str):
     Raises:
         RuntimeError: If the sandbox request fails or returns an invalid response.
     """
-    uri = settings.agent.server.agent_sandbox
+    uri = settings.agent.server.backup_sandbox_server
 
     try:
         response = requests.post(

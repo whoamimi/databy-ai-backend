@@ -210,7 +210,8 @@ class Cognitive(StateAction, StateCondition):
             self.narrate.run(client=self.client, object=self)
 
 if __name__ == "__main__":
-    cognitive = Cognitive(client=None)
-    print(cognitive)
-    print(cognitive.narrate.history)
-    print(list(cognitive.memory()))
+    #cognitive = Cognitive(client)
+    #print(cognitive)
+    #print(cognitive.narrate.history)
+    #print(list(cognitive.memory()))
+    pass

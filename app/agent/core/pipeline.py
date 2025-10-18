@@ -2,6 +2,9 @@
 app.agent.core.chain
 
 Pipeline Chain Builder for agent's workflow.
+
+TODO: revise GabyAgent
+
 """
 
 import logging
@@ -11,52 +14,82 @@ from .heartbeat import HeartMonitor
 logger = logging.getLogger("databy.agent.pipeline")
 
 class ChainBuilder(ABC):
-    """ Base class builder for all stages. """
+    """Base class for all pipeline stages."""
 
     @abstractmethod
     def set_next_stage(self, stage: "ChainBuilder"):
-        """ Sets the next stage after handling the current stage. """
+        """Sets the next stage in the pipeline chain."""
         pass
 
     @abstractmethod
     def forward(self, agent: HeartMonitor, session):
-        """ forward logic e.g. invoke next stage instead of the current. """
+        """Executes the stage logic and forwards to next stage."""
         pass
 
     @abstractmethod
     def update_agent_state(self, agent: HeartMonitor):
-        """ Changes made to the agent's state per sequential update. """
+        """Updates the agent's state during stage execution."""
         pass
 
     @abstractmethod
     def validate_stage_output(self, session):
-        """ Validates the reports / outputs per stage change. """
+        """Validates the stage output before proceeding."""
         pass
 
 class ChainStage(ChainBuilder):
+    """Concrete implementation of ChainBuilder with pipeline chaining logic."""
+
     _next_stage: ChainBuilder | None = None
 
     def set_next_stage(self, stage: ChainBuilder):
+        """Sets the next stage and returns it for chaining.
+
+        Args:
+            stage (ChainBuilder): Next stage in the pipeline
+
+        Returns:
+            ChainBuilder: The stage that was set as next
+        """
         self._next_stage = stage
         return stage
 
     def update_agent_state(self, agent: HeartMonitor):
-        """ Updates / Changes to the agent's state per stage change. """
+        """Updates agent state to reflect the next stage name.
 
+        Args:
+            agent (HeartMonitor): Agent to update
+
+        Returns:
+            HeartMonitor: Updated agent instance
+
+        TODO: Revise this method's functionality.
+        """
         agent.state = f"{str(self._next_stage.__class__.__qualname__)}"
-
         return agent
 
     @abstractmethod
-    def validate_stage_output(self, session) -:
-        """ Validates the reports / outputs per stage change.
-        TODO: update final checks
+    def validate_stage_output(self, session):
+        """Validates stage output before proceeding.
+
+        Args:
+            session: Session data to validate
+
+        Returns:
+            Session data after validation
         """
         return session
 
     @abstractmethod
     def forward(self, agent: HeartMonitor, session):
+        """Executes the stage and forwards to next stage if available.
 
+        Args:
+            agent (HeartMonitor): Agent with current state
+            session: Session data to process
+
+        Returns:
+            Result from next stage or None if this is the final stage
+        """
         if self._next_stage:
             # 1. Updates the agent's heart monitor activity for current stage (not next)
             agent = self.update_agent_state(agent)
@@ -72,7 +105,40 @@ class ChainStage(ChainBuilder):
 
         return None
 
+class SewageSystem(ABC):
+    @abstractmethod
+    def reset(self, pipeline: ChainStage):
+        """ Rechain the pipeline if required. """
+        pass
 
-#    def __init_subclass__(cls, prompt_chain: list) -> None:
-#        cls.prompt_chain = prompt_chain
-#        return super().__init_subclass__()
+    @abstractmethod
+    def run(self, session):
+        """ Runs the pipeline / workflow / cycle. """
+        pass
+
+
+class BasementPipe(SewageSystem):
+    def __init__(self, pipe: ChainStage):
+        """Initialize with an optional pipeline root stage."""
+        self.pipe = pipe
+
+    def reset(self, pipeline: ChainStage):
+        """Rechain the pipeline by assigning the root stage."""
+        self.pipe = pipeline
+        return self.pipe
+
+    def run(self, **kwargs):
+        """Run the pipeline expecting 'agent' and 'session' in kwargs."""
+        try:
+            if self.pipe is None:
+                raise RuntimeError("No pipeline assigned to BasementPipe. Call reset(pipeline) first.")
+
+            agent = kwargs.get("agent")
+            session = kwargs.get("session")
+
+            if agent is None or session is None:
+                raise TypeError("run() requires 'agent' and 'session' keyword arguments.")
+
+            return self.pipe.forward(agent, session)
+        except Exception as e:
+            raise e

@@ -1,133 +1,90 @@
 """
 app/api/socket.py
 
-WebSocket endpoints for DataBy AI’s autonomous agent.
-Handles agent heartbeats, streaming Parquet data, and client communication.
+Agent's Streaming Window to display decision-tree and actions.
 """
 
-import json
+import asyncio
 import logging
-from datetime import datetime
-from typing import Literal, Any
+from uuid import uuid4
+from fastapi import APIRouter, Request
+from fastapi.templating import Jinja2Templates
+from fastapi.responses import HTMLResponse, StreamingResponse, RedirectResponse
+from starlette.requests import Request
 
-import pandas as pd
-import pyarrow.parquet as pq
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect
-from pydantic import BaseModel, Field
-from dataclasses import asdict
+from ..utils.settings import settings
+from .utils.connection import ConnectionManager
+from .utils.schemas import Room
 
-from ..agent.core.heartbeat import HeartMonitor
+logger = logging.getLogger("uvicorn")
+window: APIRouter = APIRouter(prefix="/agent")
 
-# -----------------------------------------------------------------------------
-# Setup
-# -----------------------------------------------------------------------------
+manager: ConnectionManager = ConnectionManager()
+templates = Jinja2Templates(directory=str(settings.static_path))
 
-logger = logging.getLogger("databy-websocket")
-ws_router = APIRouter(prefix="/agent")
+async def generate_stream(room_id: str, service: str):
+    """
+    Continuously yields live updates for a given (room_id, service).
+    Each stream is fully isolated from others.
+    TODO: update this function. This fn is the main communication endpoint.
+    TODO: STREAM TEXTS / STATUS FROM OBJ AGENTSTATUS
+    """
 
-heartbeat = HeartMonitor(alive=False)
-active_connections: set[WebSocket] = set()
+    stop_event = await manager.get_room(room_id)
+    logger.info(f"Starting stream for {room_id}:{service}")
 
-# -----------------------------------------------------------------------------
-# Schemas
-# -----------------------------------------------------------------------------
+    while not stop_event.is_set():
+        await asyncio.sleep(1.5)
+        message = f"Active Streams: {manager.total_active} from {service} (room {room_id})\n\n"
+        yield message.encode("utf-8")
 
-class SocketOutput(BaseModel):
-    type: str
-    content: dict | str
-    agent: dict = Field(default_factory=lambda: asdict(heartbeat))
+    logger.info(f"Stream ended for {room_id}:{service}")
+    yield f"data: [System] Stream closed for {room_id}:{service}\n\n".encode("utf-8")
 
-class SocketInput(BaseModel):
-    type: Literal["ping", "clean", "contact"]
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
 
-class IncomingData(SocketInput):
-    input_method: Literal[
-        "mongodb", "hugging-face", "kaggle", "user-input", "supabase", "aws", "gcloud"
-    ]
-    data: Any | None = None
-    credentials: Any | None = None
+async def start_agent_window(service: str):
+    """ Utility Redirecting fn to respective page and session. """
 
-class CleanForm(IncomingData):
-    input_tags: list[str]
-    model_objective: str
+    room = Room(service=service)
+    room_id = str(room.id)
+    await manager.add(room)
+    return RedirectResponse(url=f"/agent/window/{room_id}/{service}")
 
-class InsightForm(IncomingData):
-    input_tags: list[str]
-    description: str | None
+@window.get("/clean/")
+async def start_data_cleaning():
+    """
+    Auto-creates a new isolated streaming session and redirects
+    to /window/{room_id}/{service}.
+    """
+    await start_agent_window(service="clean")
 
-WELCOME_MSG = SocketOutput(
-    type="connection_established",
-    content={
-        "message": "Connected to DataBy AI Agent WebSocket",
-        "available_commands": [
-            "ping - Check agent status",
-            "subscribe - Subscribe to real-time updates",
-            "getStatus - Get current status",
-            "cleanReport - Request data summary",
-            "setAgentState - Manually set agent state",
-        ],
-    },
-)
+@window.get("/analytics/")
+async def start_data_dashboard():
+    """
+    Auto-creates a new isolated streaming session and redirects
+    to /window/{room_id}/{service}.
+    """
+    await start_agent_window(service="analytics")
 
-# -----------------------------------------------------------------------------
-# Core WebSocket Endpoint
-# -----------------------------------------------------------------------------
+@window.get("/window/{room_id}/{service}", response_class=HTMLResponse)
+async def agent_window(request: Request, room_id: str, service: str):
+    """
+    Serves both the HTML streaming interface and, if requested with the appropriate
+    'Accept' header, streams live Server-Sent Events (SSE) updates.
+    """
+    if room_id not in manager.rooms:
+        logger.warning(f"Attempt to access non-existent room: {room_id}")
+        return HTMLResponse(content="Room not found", status_code=404)
 
-@ws_router.websocket("/ws")
-async def websocket_endpoint(websocket: WebSocket) -> None:
-    """Main WebSocket endpoint for real-time agent communication."""
-    await websocket.accept()
-    active_connections.add(websocket)
-    heartbeat.set_alive(True)
+    # Detect if this is an EventSource (SSE) request
+    if request.headers.get("accept") == "text/event-stream":
+        logger.info(f"Starting SSE stream for {room_id}:{service}")
+        return StreamingResponse(generate_stream(room_id, service), media_type="text/event-stream")
 
-    await websocket.send_text(WELCOME_MSG.model_dump_json())
-    logger.info("🔌 Client connected to DataBy AI WebSocket")
-
-    try:
-        while True:
-            raw_message = await websocket.receive_text()
-
-            try:
-                message = json.loads(raw_message)
-                msg_type = message.get("type")
-            except json.JSONDecodeError:
-                await websocket.send_text(
-                    SocketOutput(
-                        type="error_input_format",
-                        content="Message must be valid JSON.",
-                    ).model_dump_json()
-                )
-                continue
-
-            logger.info(f"📩 Received message: {msg_type}")
-
-            # --- handle message types ---
-            if msg_type == "ping":
-                response = SocketOutput(
-                    type="pong",
-                    content={"alive": heartbeat.is_alive, "timestamp": heartbeat.last_ping},
-                )
-
-            else:
-                response = SocketOutput(
-                    type="error_unknown_command",
-                    content=f"Unrecognized command: {msg_type}",
-                )
-
-            await websocket.send_text(response.model_dump_json())
-
-    except WebSocketDisconnect:
-        logger.info("🔻 WebSocket client disconnected")
-    except Exception as e:
-        logger.exception("Unhandled WebSocket error")
-        await websocket.send_text(
-            SocketOutput(
-                type="server_error", content=f"Internal server error: {str(e)}"
-            ).model_dump_json()
-        )
-    finally:
-        if websocket in active_connections:
-            active_connections.remove(websocket)
-        heartbeat.set_alive(False)
-        logger.info(f"🔒 Connection closed. Active: {len(active_connections)}")
+    # Otherwise, serve the HTML page
+    logger.info(f"Serving HTML window for {room_id}:{service}")
+    return templates.TemplateResponse("index.html", {
+        "request": request,
+        "room_id": room_id,
+        "service": service
+    })

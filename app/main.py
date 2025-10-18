@@ -1,5 +1,8 @@
-# src/databy/main.py
-# TODO: DOCUMENT ENDPOINT FOR THE FASTAPI APP....
+"""
+app.main
+
+TODO: DOCUMENT ENDPOINT FOR THE FASTAPI APP....
+"""
 
 import logging
 from fastapi import FastAPI, Request
@@ -7,9 +10,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from .utils.settings import settings
-from .api.docs import docs_router
-# from .api.socket import ws_router
-from .api.window import agent_window_router
+
+# from .api.docs import docs_router
+from .api.socket import window
 
 logger = logging.getLogger("uvicorn")
 logger.propagate = True
@@ -19,12 +22,13 @@ app = FastAPI(
     description=settings.app_description,
     version=settings.app_version,
 )
-# CORS middleware for Vite dev server (adjust origins in settings)
+# CORS middleware for NextJS dev server (adjust origins in settings)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:3000",
-        "http://localhost:5173",  # Vite dev server default
+        "http://localhost:5173",  # NextJS dev server default
         "http://127.0.0.1:3000",
         "http://127.0.0.1:5173",
         "http://localhost:8080",
@@ -35,9 +39,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(docs_router)
-# app.include_router(ws_router)
-app.include_router(agent_window_router)
+# app.include_router(docs_router)
+app.include_router(window)
+# app.include_router(agent_window_router)
 
 @app.get("/")
 async def root():

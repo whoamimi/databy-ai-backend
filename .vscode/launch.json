@@ -1,0 +1,19 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+
+    {
+      "type": "debugpy",
+      "request": "launch",
+      "name": "Python: Run DataBy CLI Serve",
+      "module": "${workspaceFolderBasename}",
+      "args": [
+        "serve",
+        "--reload"
+      ],
+      "envFile": "${workspaceFolder}/.env",
+      "justMyCode": true,
+      "console": "integratedTerminal"
+    }
+  ]
+}

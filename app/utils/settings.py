@@ -1,39 +1,24 @@
 """
 app.utils.settings
+
 Application settings and configuration.
+
 """
 
 import os
 import yaml
 import logging
 from pathlib import Path
-from dotenv import load_dotenv
 from dataclasses import dataclass, field
 from typing import Literal
 
-load_dotenv('.env')
+from  ..utils.utils import setup_dev_workspace
+
+if os.getenv("LOG_LEVEL", "DEBUG") == "DEBUG":
+    from dotenv import load_dotenv
+    load_dotenv('.env')
 
 logger = logging.getLogger("uvicorn")
-
-ROOT_DIR_NAME = 'backend'
-
-def setup_dev_workspace(root_folder_name: str = ROOT_DIR_NAME):
-    """ Call in files / notebooks if running workspace in sub-directory path. """
-
-    if Path.cwd().stem == root_folder_name:
-        logger.info(f'Path already set to default root directory: {Path.cwd()}')
-        return Path.cwd()
-    else:
-        logger.info('Initialized workspace currently at directory: %s', Path.cwd())
-
-    current = Path().resolve()
-    for parent in [current, *current.parents]:
-        if parent.name == root_folder_name:
-            os.chdir(parent)  # change working directory
-            logger.info(f"📂 Working directory set to: {parent}")
-            return parent # Exit after changing directory
-
-    raise FileNotFoundError(f"Root folder '{root_folder_name}' cannot be found from current dir: {Path.cwd()} ")
 
 @dataclass
 class ModelConfig:
@@ -98,43 +83,74 @@ class AgentConfigBuild:
         with open(file_path, "r") as f:
             return yaml.safe_load(f)
 
-    @staticmethod
-    def load_agent_generator(file_path: str):
-        """ Load from `genai.yaml` default models. """
-
-        genai: dict = {}
-        with open(file_path, "r") as f:
-            for file in yaml.safe_load(f):
-                genai.update({
-                    file.get('model_name'):
-                        ModelConfig(
-                            dev=file.get('model_id', ''),
-                            prod=file.get('model_id', ''),
-                            url=file.get('url', None),
-                            alt=file.get('alt', None)
-                        )
-                })
-
-        logger.info('AgentConfig Stack build loaded!')
-
-        receiver = yield
-        while True:
-            if receiver and isinstance(receiver, str):
-                if model_config := genai.get(receiver, None):
-                    yield model_config
-            receiver = yield
 
 @dataclass(frozen=True)
-class AgentServerBuild:
-    # SERVERS
+class Sandbox:
+    # https://jupyterhub.readthedocs.io/en/stable/tutorial/index.html#working-with-the-jupyterhub-api
+    # https://github.com/jupyterhub/jupyterhub?tab=readme-ov-file
+
+    jupyter_url: str = os.getenv("JUPYTER_URL", "")
+    jupyter_token: str = os.getenv("JUPYTER_TOKEN", "")
+    document_id: str = os.getenv("DOCUMENT_ID", "")
+    allow_img_output: bool = os.getenv("ALLOW_IMG_OUTPUT", "False").lower() in ("1", "true", "yes")
+    backup_sandbox_server: str = os.getenv("AGENT_SANDBOX_URL", "")
+
+@dataclass(frozen=True)
+class AgentServerBuild(Sandbox):
     ollama: str = os.getenv("OLLAMA_HOST_URL", "")
-    redis: str = os.getenv("REDIS_HOST_URL","redis://localhost:6379")
-    agent_sandbox: str = os.getenv("AGENT_SANDBOX_URL", "")
+    kaggle_kernel: str = os.getenv("KAGGLE_API_KEY", "")
+    kaggle_kernel_server: str = os.getenv("KAGGLE_KERNEL_SERVER", "")
+
+@dataclass(frozen=True)
+class AWSConfig:
+    # iam role
+    region: str = field(default=os.getenv("AWS_DEFAULT_REGION", ""))
+    access_key_id: str = field(default=os.getenv("AWS_ACCESS_KEY_ID", ""))
+    secret_access_key: str = field(default=os.getenv("AWS_SECRET_ACCESS_KEY", ""))
+
+    sagemaker_domain_id: str = field(default=os.getenv("AWS_SAGEMAKER_DOMAIN_ID", ""))
+    s3_bucket: str = field(default=os.getenv("AWS_S3_BUCKET", ""))
+
+    # client setup
+    boto_client: str = field(default="iam")
+    iam_role: str = field(default="SageMaker")
+    # service roles
+    sagemaker_service_role: str = field(default="sagemaker")
+    bedrock_service_role: str = field(default=os.getenv("AWS_BEDROCK_SERVICE_ROLE", ""))
+    bedrock_agencore_service_role: str = field(default="bedrock-agentcore")
+
+    # ec2 instance default setup
+    instance_count: int = field(default=1)
+    instance_type: str = field(default="ml.t3.medium")
+
+@dataclass(frozen=True)
+class GCConfig:
+    region: str = field(default=os.getenv("GCLOUD_REGION", ""))
+    access_key_id: str = field(default=os.getenv("GCLOUD_ACCESS_KEY_ID", ""))
+    secret_access_key: str = field(default=os.getenv("GCLOUD_SECRET_ACCESS_KEY", ""))
+    bigquery_domain_id: str = field(default=os.getenv("GCLOUD_BIGQUERY_ENDPOINT", ""))
+
+@dataclass(frozen=True)
+class LightningConfig:
+    api_key: str = field(default=os.getenv("LIGHTNING_API_KEY", ""))
+
+@dataclass(frozen=True)
+class AgentCloud:
+    aws: AWSConfig = field(default_factory=AWSConfig)
+    gcloud: GCConfig = field(default_factory=GCConfig)
+    lightning: LightningConfig = field(default_factory=LightningConfig)
+
+@dataclass(frozen=True)
+class AgentDatabase:
+    hf_user: str = field(default=os.getenv("HF_USER", ""))
+    hf_token: str = field(default=os.getenv("HF_API_KEY", ""))
 
 @dataclass(frozen=True)
 class AgentBuild:
     server: AgentServerBuild
     stack: AgentConfigBuild
+    cloud: AgentCloud
+    database: AgentDatabase
 
 @dataclass
 class Settings:
@@ -147,13 +163,14 @@ class Settings:
     docs_endpoint: str = "/api/docs"
 
     # DEV WORKSPACE
-    debug: bool = True
-    log_level: str = "DEBUG"
+    debug: bool = field(default=os.getenv("DEBUG", "True").lower() in ("1", "true", "yes", "y"))
+    log_level: str = field(default=os.getenv("LOG_LEVEL", "DEBUG"))
 
     # DIR PATHS
     root_dir: Path = field(init=False)
     docs_local_path: Path = field(init=False)
     static_path: Path = field(init=False)
+    cli_path: Path = field(init=False)
 
     # AGENT
     agent: AgentBuild = field(init=False)
@@ -166,6 +183,7 @@ class Settings:
         self.root_dir = setup_dev_workspace()
         self.docs_local_path = self.root_dir / "docs"
         self.static_path = self.root_dir / "app" / "static"
+        self.cli_path = self.root_dir / "app" / "config" / "cli.yaml"
 
         logger.info(f"Default directory to: {self.root_dir}")
 
@@ -179,9 +197,13 @@ class Settings:
 
         stack= AgentConfigBuild(config_path=config_path)
         server = AgentServerBuild()
+        cloud = AgentCloud()
+        db = AgentDatabase()
         self.agent = AgentBuild(
             stack=stack,
-            server=server
+            server=server,
+            cloud=cloud,
+            database=db
         )
 
     @property

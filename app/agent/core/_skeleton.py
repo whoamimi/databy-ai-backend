@@ -1,8 +1,7 @@
 """
-app/agent/core/_skeleton.py
+app.agent.core._skeleton
 
 Defines the base framework for constructing agents.
-This script isn’t meant to be imported directly—it serves as a parent class for child implementations (AI Agent Helpers i.e. Instruct LLMs).
 
 Base classes
 - Spine: Default agent builder
@@ -10,7 +9,6 @@ Base classes
 
 """
 
-from gguf import Any
 import ollama
 import inspect
 import logging
@@ -217,13 +215,29 @@ class Actuator:
             },
         }
         Actuator._action_space[self.current_workflow][tool_name] = func
-        print(f"[AGENT TOOLKIT] ADDED {tool_name} TO WORKFLOW: `{self.current_workflow}`")
+        print(f"[PROG ACTION SPACE] ADDED {tool_name} TO WORKFLOW: `{self.current_workflow}`")
 
         @wraps(func)
         def wrapper(*args, **kwargs):
             return func(*args, **kwargs)
 
         return wrapper
+
+class Outbound(ABC):
+    @abstractmethod
+    def setup_outbound(self, **kwargs):
+        """ Default setup if external server is not configured."""
+        return kwargs
+
+    @abstractmethod
+    def ping(self, **kwargs):
+        """ Runs checks to ensure the server is alive. """
+        return kwargs
+
+    @abstractmethod
+    def inference(self, **kwargs):
+        """ Invoke message to outbound / external servers. """
+        return kwargs
 
 if __name__ == "__main__":
     print("Registered agents sharing the same spine:\n", Spine.registry)

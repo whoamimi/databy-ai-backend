@@ -1,10 +1,17 @@
 """
 app.agent.memory.gatekeeper.bigquery
 
+Script to setup & run Google BigQuery AI/ML Operations.
+
 """
 
-from .utils import pandas_gatekeeper
+from utils.settings import settings
+from agent.core._skeleton import Actuator
 from .queries import SQL_DESCRIBE_DATA_FIELD_LABEL, SQL_DETECT_NUMERIC_FIELD
+
+pandas_gatekeeper = Actuator("pandas-gatekeeper")
+
+config = settings.agent.cloud.gcloud
 
 @pandas_gatekeeper
 def describe_data_field(

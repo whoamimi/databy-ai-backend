@@ -112,46 +112,54 @@ The system provides real-time updates through WebSocket connections:
 ### Installation
 
 1. **Clone the repository**:
-   ```bash
-   git clone <repository-url>
-   cd databy-ai/backend
-   ```
 
-2. **Create virtual environment & setup env variables**:
+```bash
+git clone <repository-url>
+cd databy-ai/backend
+```
+
+1. **Create virtual environment & setup env variables**:
    Update all env variables in `.env.example` with your info.
-   ```bash
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
-   ```
 
-3. **Install dependencies**:
-   ```bash
-   pip install -e ".[dev,test]"
-   ```
+```bash
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+```
 
-4. **Set up environment**:
-   ```bash
-   cp .env.example .env  # Configure as needed
-   ```
+1. **Install dependencies**:
+
+```bash
+pip install -e ".[dev,test]"
+```
+
+1. **Set up environment**:
+
+```bash
+cp .env.example .env  # Configure as needed
+```
 
 ### Running the Server
 
 **Development Mode**:
+
 ```bash
 python -m app serve --reload
 ```
 
 **Production Mode**:
+
 ```bash
 python -m app serve --host 0.0.0.0 --port 8000
 ```
 
 **Using CLI**:
+
 ```bash
 databy serve --port 8000
 ```
 
 The server will start on `http://localhost:8000` with:
+
 - 📚 **API Documentation**: `http://localhost:8000/api/docs`
 - 🔌 **WebSocket Endpoint**: `ws://localhost:8000/agent/ws`
 - ❤️ **Health Check**: `http://localhost:8000/health`
@@ -211,19 +219,22 @@ databy status
 ### Setup Development Environment
 
 1. **Install development dependencies**:
-   ```bash
-   pip install -e ".[dev,test]"
-   ```
 
-2. **Install pre-commit hooks**:
-   ```bash
-   pre-commit install
-   ```
+```bash
+pip install -e ".[dev,test]"
+```
 
-3. **Run development server**:
-   ```bash
-   python -m app serve --reload
-   ```
+1. **Install pre-commit hooks**:
+
+```bash
+pre-commit install
+```
+
+1. **Run development server**:
+
+```bash
+python -m app serve --reload
+```
 
 ### Running Tests
 
