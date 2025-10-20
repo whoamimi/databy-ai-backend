@@ -1,0 +1,47 @@
+{
+  "mcpServers": {
+    "databy-agent": {
+      "command": "python",
+      "args": ["-m", "app"],
+      "env": {
+        "PYTHONPATH": ".",
+        "LOG_LEVEL": "INFO"
+      },
+      "capabilities": {
+        "tools": true,
+        "resources": true,
+        "prompts": true
+      }
+    },
+    "filesystem": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "./data"],
+      "capabilities": {
+        "resources": true
+      }
+    },
+    "github": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_TOKEN}"
+      },
+      "capabilities": {
+        "tools": true,
+        "resources": true
+      }
+    },
+    "aws-toolkit": {
+      "command": "npx",
+      "args": ["-y", "@aws/mcp-server-aws"],
+      "env": {
+        "AWS_REGION": "${AWS_REGION}",
+        "AWS_ACCESS_KEY_ID": "${AWS_ACCESS_KEY_ID}",
+        "AWS_SECRET_ACCESS_KEY": "${AWS_SECRET_ACCESS_KEY}"
+      },
+      "capabilities": {
+        "tools": true
+      }
+    }
+  }
+}

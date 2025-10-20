@@ -5,15 +5,16 @@ TODO: DOCUMENT ENDPOINT FOR THE FASTAPI APP....
 """
 
 import logging
-from discord import HTTPException
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
-from .api.utils.schemas import CleanForm, InsightForm
 from .utils.settings import settings
 from .api.socket import window
+from .api.datasource import router
+from .api.mongodb import mongo
+from .api.dashboard import dashboard
 
 logger = logging.getLogger("uvicorn")
 logger.propagate = True
@@ -39,26 +40,19 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
 # Mount static files BEFORE including routers
 app.mount("/static", StaticFiles(directory=str(settings.static_path)), name="static")
-
-# Include routers
 app.include_router(window)
+app.include_router(router)
+app.include_router(mongo)
+app.include_router(dashboard)
 
-@app.get("/")
+@app.get("/", include_in_schema=False)
 async def root():
-    """Root endpoint."""
-
-    return {
-        "message": "Welcome to" + settings.app_title + "!",
-        "version": settings.app_version
-    }
-
-@app.get("/health")
-async def health_check():
-    """Health check endpoint."""
-    return {"status": "healthy", "service": "databy-ai"}
+    """
+    Redirect root URL to the automatic Swagger UI docs page.
+    """
+    return RedirectResponse(url="/docs")
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):

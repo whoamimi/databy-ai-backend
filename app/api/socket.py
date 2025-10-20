@@ -23,12 +23,7 @@ templates = Jinja2Templates(directory=str(settings.template_path))
 manager: ConnectionManager = ConnectionManager()
 
 async def generate_stream(room_id: str, service: str):
-    """
-    Continuously yields live updates for a given (room_id, service).
-    Each stream is fully isolated from others.
-    TODO: update this function. This fn is the main communication endpoint.
-    TODO: STREAM TEXTS / STATUS FROM OBJ AGENTSTATUS
-    """
+    """ Streaming agent's state to platform. TODO: STREAM TEXTS / STATUS FROM OBJ AGENTSTATUS. """
 
     room = await manager.get_room(room_id)
     logger.info(f"Starting stream for {room_id}:{service}")

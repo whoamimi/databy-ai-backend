@@ -15,14 +15,11 @@ from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse, StreamingResponse, RedirectResponse, JSONResponse
 
 from ..utils.settings import settings
-from .utils.manager import ConnectionManager
 from .utils.schemas import InsightForm
 
 logger = logging.getLogger("uvicorn")
-window: APIRouter = APIRouter(prefix="/app")
+dashboard: APIRouter = APIRouter(prefix="/app")
 templates = Jinja2Templates(directory=str(settings.template_path))
-
-manager: ConnectionManager = ConnectionManager()
 
 async def generate_stream(room_id: str, service: str):
     """
@@ -30,15 +27,15 @@ async def generate_stream(room_id: str, service: str):
     Each stream is fully isolated from others.
     TODO: update this function. This fn is the main communication endpoint.
     TODO: STREAM TEXTS / STATUS FROM OBJ AGENTSTATUS
+    TODO: Implement actual dashboard streaming logic
     """
-
-    room = await manager.get_room(room_id)
     logger.info(f"Starting stream for {room_id}:{service}")
 
     try:
-        while not room:
+        # Placeholder streaming logic
+        for i in range(5):
             await asyncio.sleep(1.5)
-            message = f"Active Streams: {manager.total_active} from {service} (room {room_id})"
+            message = f"Dashboard stream update {i+1} for room {room_id}"
             # Proper SSE format
             yield f"data: {message}\n\n"
     except Exception as e:
@@ -47,7 +44,7 @@ async def generate_stream(room_id: str, service: str):
         logger.info(f"Stream ended for {room_id}:{service}")
         yield f"data: [System] Stream closed for {room_id}:{service}\n\n"
 
-@window.post("/start-insights-dashboard")
+@dashboard.post("/start-dashboard-app")
 async def start_wrangler_session(inputs: InsightForm):
     """
     Launches the appropriate data wrangling service (clean or insights)
