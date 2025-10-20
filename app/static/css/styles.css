@@ -1,27 +1,36 @@
 :root {
-  /* Brand Colors - Professional Tech Theme */
-  --brand-primary: #00c8d6;
-  --brand-primary-light: #1ad8e6;
-  --brand-primary-dark: #009ba8;
-  --brand-accent: #00e5f0;
-  --brand-secondary: #0a4f7d;
+  /* Brand Colors - Matching Frontend Turquoise Theme */
+  /* Primary: hsl(186 68% 49%) = #28bfd1 */
+  --brand-primary: #28bfd1;
+  --brand-primary-light: #3dd4e6;
+  --brand-primary-dark: #1fa5b7;
+  --brand-accent: #40e0f0;
+  --brand-secondary: #0f6b8f;
 
-  /* Dark Mode Base */
-  --bg-primary: #0a0e14;
-  --bg-secondary: #12171f;
-  --bg-tertiary: #1a212b;
-  --bg-elevated: #1e2633;
+  /* Complementary Accents (from frontend) */
+  --coral-primary: hsl(350, 75%, 70%);     /* #f28b99 */
+  --coral-secondary: hsl(345, 80%, 72%);   /* #f58a9b */
+  --coral-accent: hsl(355, 70%, 68%);      /* #ed808e */
+  --green-primary: hsl(160, 65%, 55%);     /* #44d9ab */
+  --green-secondary: hsl(155, 70%, 60%);   /* #4ee3b3 */
+  --green-accent: hsl(150, 60%, 58%);      /* #52d9a8 */
+
+  /* Dark Mode Base - Aligned with Frontend */
+  --bg-primary: hsl(186, 84%, 4.9%);       /* Very dark cyan-tinted */
+  --bg-secondary: hsl(186, 80%, 6%);
+  --bg-tertiary: hsl(186, 75%, 8%);
+  --bg-elevated: hsl(186, 70%, 10%);
 
   /* Surface Colors */
-  --surface-base: rgba(18, 23, 31, 0.95);
-  --surface-elevated: rgba(30, 38, 51, 0.95);
-  --surface-overlay: rgba(26, 33, 43, 0.98);
+  --surface-base: hsla(186, 84%, 4.9%, 0.95);
+  --surface-elevated: hsla(186, 70%, 10%, 0.95);
+  --surface-overlay: hsla(186, 75%, 8%, 0.98);
 
-  /* Text Colors */
-  --text-primary: #f0f4f8;
-  --text-secondary: #a8b2bf;
-  --text-tertiary: #6b7785;
-  --text-accent: #00c8d6;
+  /* Text Colors - Matching Frontend */
+  --text-primary: hsl(186, 40%, 98%);
+  --text-secondary: hsl(186, 25%, 75%);
+  --text-tertiary: hsl(186, 25%, 60%);
+  --text-accent: #28bfd1;
 
   /* Semantic Colors */
   --success: #10b981;
@@ -29,34 +38,35 @@
   --error: #ef4444;
   --info: #3b82f6;
 
-  /* Effects */
+  /* Effects - Enhanced for Frontend Consistency */
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
   --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -1px rgba(0, 0, 0, 0.3);
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -2px rgba(0, 0, 0, 0.4);
-  --shadow-brand: 0 0 30px rgba(0, 200, 214, 0.15), 0 0 60px rgba(0, 200, 214, 0.1);
-  --shadow-brand-strong: 0 0 40px rgba(0, 200, 214, 0.3), 0 0 80px rgba(0, 200, 214, 0.15);
+  --shadow-brand: 0 0 30px rgba(40, 191, 209, 0.18), 0 0 60px rgba(40, 191, 209, 0.12);
+  --shadow-brand-strong: 0 0 40px rgba(40, 191, 209, 0.35), 0 0 80px rgba(40, 191, 209, 0.18);
 
-  /* Borders */
-  --border-subtle: 1px solid rgba(168, 178, 191, 0.08);
-  --border-medium: 1px solid rgba(168, 178, 191, 0.12);
-  --border-brand: 1px solid rgba(0, 200, 214, 0.25);
+  /* Borders - Matching Frontend */
+  --border-subtle: 1px solid hsla(186, 32%, 91.4%, 0.08);
+  --border-medium: 1px solid hsla(186, 32%, 91.4%, 0.12);
+  --border-brand: 1px solid rgba(40, 191, 209, 0.25);
 
   /* Glass Effect */
-  --glass-bg: rgba(30, 38, 51, 0.6);
-  --glass-border: rgba(240, 244, 248, 0.08);
+  --glass-bg: hsla(186, 70%, 10%, 0.6);
+  --glass-border: hsla(186, 40%, 98%, 0.08);
 
   /* Transitions */
   --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
   --transition-base: 300ms cubic-bezier(0.4, 0, 0.2, 1);
   --transition-slow: 500ms cubic-bezier(0.4, 0, 0.2, 1);
 
-  /* Orb Configuration */
-  --orb-size: 220px;
-  --orb-color-primary: rgba(0, 200, 214, 0.9);
-  --orb-color-mid: rgba(0, 200, 214, 0.6);
-  --orb-color-outer: rgba(0, 200, 214, 0.3);
-  --orb-color-accent: rgba(10, 79, 125, 0.15);
-  --orb-shadow-base: 0 0 40px rgba(0, 200, 214, 0.3), 0 0 80px rgba(0, 200, 214, 0.15);
+  /* Optimized Orb Configuration */
+  --orb-size: 240px;
+  --orb-color-primary: rgba(40, 191, 209, 0.95);
+  --orb-color-mid: rgba(40, 191, 209, 0.65);
+  --orb-color-outer: rgba(40, 191, 209, 0.35);
+  --orb-color-accent-green: rgba(68, 217, 171, 0.15);
+  --orb-color-accent-coral: rgba(242, 139, 153, 0.12);
+  --orb-shadow-base: 0 0 50px rgba(40, 191, 209, 0.35), 0 0 100px rgba(40, 191, 209, 0.18);
   --orb-timing-breathe: 4s;
   --orb-timing-float: 8s;
   --orb-timing-ring: 6s;
@@ -77,7 +87,7 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Subtle gradient overlay */
+/* Subtle gradient overlay with coral and green accents - matching frontend */
 body::before {
   content: '';
   position: absolute;
@@ -85,16 +95,27 @@ body::before {
   left: 0;
   width: 100%;
   height: 100%;
-  background: radial-gradient(
-    circle at 20% 30%,
-    rgba(0, 200, 214, 0.03) 0%,
-    transparent 50%
-  ),
-  radial-gradient(
-    circle at 80% 70%,
-    rgba(10, 79, 125, 0.04) 0%,
-    transparent 50%
-  );
+  background:
+    /* Top-left green accent */
+    radial-gradient(
+      circle at 0% 0%,
+      hsla(160, 65%, 55%, 0.08) 0%,
+      hsla(155, 70%, 60%, 0.04) 25%,
+      transparent 50%
+    ),
+    /* Top-right coral accent */
+    radial-gradient(
+      circle at 100% 0%,
+      hsla(350, 75%, 70%, 0.08) 0%,
+      hsla(345, 80%, 72%, 0.04) 25%,
+      transparent 50%
+    ),
+    /* Center turquoise glow */
+    radial-gradient(
+      circle at 50% 50%,
+      rgba(40, 191, 209, 0.04) 0%,
+      transparent 60%
+    );
   pointer-events: none;
   z-index: 0;
 }
@@ -109,7 +130,7 @@ body::before {
   z-index: 1;
 }
 
-/* Minimal grid for depth */
+/* Minimal grid for depth - matching frontend subtle style */
 .agent-window::before {
   content: '';
   position: absolute;
@@ -118,11 +139,11 @@ body::before {
   width: 100%;
   height: 100%;
   background-image:
-    linear-gradient(rgba(0, 200, 214, 0.02) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0, 200, 214, 0.02) 1px, transparent 1px);
+    linear-gradient(rgba(40, 191, 209, 0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(40, 191, 209, 0.02) 1px, transparent 1px);
   background-size: 80px 80px;
   pointer-events: none;
-  opacity: 0.3;
+  opacity: 0.25;
   z-index: 0;
 }
 
@@ -136,7 +157,7 @@ body::before {
   z-index: 1;
 }
 
-/* === ORB COMPONENT === */
+/* === OPTIMIZED ORB COMPONENT === */
 .orb {
   /* Base structure */
   position: relative;
@@ -144,69 +165,80 @@ body::before {
   height: var(--orb-size);
   border-radius: 50%;
 
-  /* Visual styling */
+  /* Enhanced visual styling with complementary accents */
   background: radial-gradient(
-    circle at 40% 40%,
+    circle at 35% 35%,
     var(--orb-color-primary) 0%,
-    var(--orb-color-mid) 30%,
-    var(--orb-color-outer) 60%,
-    var(--orb-color-accent) 85%,
+    var(--orb-color-mid) 25%,
+    var(--orb-color-outer) 50%,
+    var(--orb-color-accent-green) 75%,
+    var(--orb-color-accent-coral) 90%,
     transparent 100%
   );
   box-shadow: var(--orb-shadow-base);
-  filter: blur(0.5px);
+  filter: blur(0.8px);
 
-  /* Animation & transitions */
+  /* Smooth animations */
   animation:
     orbBreathe var(--orb-timing-breathe) ease-in-out infinite,
     orbFloat var(--orb-timing-float) ease-in-out infinite;
   transition: all var(--transition-slow);
 }
 
-/* Outer ring effect */
+/* Enhanced outer ring with coral/green tints */
 .orb::before {
   content: '';
   position: absolute;
-  inset: -15px;
+  inset: -18px;
   border-radius: 50%;
-  background: radial-gradient(
-    circle at center,
-    transparent 55%,
-    var(--orb-color-outer) 70%,
-    transparent 85%
-  );
+  background:
+    radial-gradient(
+      circle at center,
+      transparent 50%,
+      var(--orb-color-outer) 65%,
+      var(--orb-color-accent-green) 75%,
+      var(--orb-color-accent-coral) 85%,
+      transparent 95%
+    );
   animation: ringPulse var(--orb-timing-breathe) ease-in-out infinite;
-  opacity: 0.5;
-}
-
-/* Rotating border accent */
-.orb::after {
-  content: '';
-  position: absolute;
-  inset: -8px;
-  border-radius: 50%;
-  border: 1.5px solid transparent;
-  border-top-color: var(--orb-color-mid);
-  border-right-color: var(--orb-color-outer);
-  animation: ringRotate var(--orb-timing-ring) linear infinite;
   opacity: 0.6;
 }
 
-/* Inner core glow */
+/* Refined rotating border with gradient */
+.orb::after {
+  content: '';
+  position: absolute;
+  inset: -10px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  border-top-color: var(--orb-color-mid);
+  border-right-color: var(--orb-color-outer);
+  border-bottom-color: var(--orb-color-accent-green);
+  animation: ringRotate var(--orb-timing-ring) linear infinite;
+  opacity: 0.5;
+  filter: blur(0.5px);
+}
+
+/* Enhanced inner core with white hot center */
 .orb-core {
   position: absolute;
-  inset: 25%;
+  inset: 22%;
   border-radius: 50%;
   background: radial-gradient(
-    circle at 35% 35%,
-    rgba(255, 255, 255, 0.95) 0%,
-    rgba(0, 229, 240, 0.8) 25%,
-    rgba(0, 200, 214, 0.5) 50%,
+    circle at 30% 30%,
+    rgba(255, 255, 255, 1) 0%,
+    rgba(255, 255, 255, 0.9) 15%,
+    rgba(64, 224, 240, 0.85) 30%,
+    rgba(40, 191, 209, 0.6) 50%,
+    rgba(40, 191, 209, 0.3) 70%,
     transparent 100%
   );
-  filter: blur(3px);
-  animation: coreGlow 3s ease-in-out infinite alternate;
-  box-shadow: 0 0 20px var(--orb-color-mid);
+  filter: blur(2px);
+  animation: coreGlow 3.5s ease-in-out infinite alternate;
+  box-shadow:
+    0 0 25px rgba(40, 191, 209, 0.6),
+    0 0 40px rgba(40, 191, 209, 0.3),
+    inset 0 0 15px rgba(255, 255, 255, 0.4);
 }
 
 /* === STATUS TEXT === */
@@ -217,7 +249,7 @@ body::before {
   color: var(--text-accent);
   opacity: 0.95;
   animation: textPulse 3s ease-in-out infinite;
-  text-shadow: 0 0 20px rgba(0, 200, 214, 0.3);
+  text-shadow: 0 0 20px rgba(40, 191, 209, 0.4), 0 0 40px rgba(40, 191, 209, 0.2);
   letter-spacing: 1.5px;
   text-transform: uppercase;
 }
@@ -423,42 +455,54 @@ body::before {
 
 /* === ANIMATIONS === */
 
-/* Orb Animations */
+/* Optimized Orb Animations */
 @keyframes orbBreathe {
   0%, 100% {
     transform: scale(1);
-    filter: blur(0.5px) brightness(1);
+    filter: blur(0.8px) brightness(1);
   }
   50% {
-    transform: scale(1.08);
-    filter: blur(0.5px) brightness(1.3);
+    transform: scale(1.06);
+    filter: blur(0.8px) brightness(1.25);
   }
 }
 
 @keyframes orbFloat {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-10px); }
+  0%, 100% {
+    transform: translateY(0) translateX(0);
+  }
+  25% {
+    transform: translateY(-8px) translateX(3px);
+  }
+  50% {
+    transform: translateY(-12px) translateX(-2px);
+  }
+  75% {
+    transform: translateY(-6px) translateX(-4px);
+  }
 }
 
 @keyframes coreGlow {
   from {
-    filter: blur(3px) brightness(1.3);
-    opacity: 0.85;
+    filter: blur(2px) brightness(1.4);
+    opacity: 0.9;
+    transform: scale(1);
   }
   to {
-    filter: blur(4px) brightness(1.6);
+    filter: blur(3px) brightness(1.7);
     opacity: 1;
+    transform: scale(1.03);
   }
 }
 
 @keyframes ringPulse {
   0%, 100% {
     transform: scale(1);
-    opacity: 0.5;
+    opacity: 0.6;
   }
   50% {
-    transform: scale(1.05);
-    opacity: 0.8;
+    transform: scale(1.04);
+    opacity: 0.85;
   }
 }
 
@@ -601,7 +645,7 @@ body::before {
 
 .btn-primary {
   background: var(--brand-primary);
-  color: var(--bg-primary);
+  color: white;
   border: none;
   padding: 0.625rem 1.5rem;
   border-radius: 6px;
@@ -609,13 +653,30 @@ body::before {
   font-size: 0.875rem;
   cursor: pointer;
   transition: all var(--transition-base);
-  box-shadow: 0 0 20px rgba(0, 200, 214, 0.2);
+  box-shadow: 0 0 20px rgba(40, 191, 209, 0.25);
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-primary::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s ease;
 }
 
 .btn-primary:hover {
   background: var(--brand-primary-light);
-  box-shadow: 0 0 30px rgba(0, 200, 214, 0.4);
+  box-shadow: 0 0 35px rgba(40, 191, 209, 0.45);
   transform: translateY(-1px);
+}
+
+.btn-primary:hover::before {
+  left: 100%;
 }
 
 .btn-primary:active {
@@ -633,9 +694,9 @@ body::before {
   }
 }
 
-/* === SCROLLBAR === */
+/* === SCROLLBAR - Matching Frontend === */
 ::-webkit-scrollbar {
-  width: 6px;
+  width: 8px;
 }
 
 ::-webkit-scrollbar-track {
@@ -643,13 +704,13 @@ body::before {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(0, 200, 214, 0.3);
-  border-radius: 3px;
+  background: rgba(40, 191, 209, 0.35);
+  border-radius: 4px;
   transition: background var(--transition-base);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 200, 214, 0.5);
+  background: rgba(40, 191, 209, 0.55);
 }
 
 /* === RESPONSIVE DESIGN === */

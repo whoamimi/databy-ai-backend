@@ -24,6 +24,16 @@ from typing import Literal, Any
 from ...agent.main import GabyWindow
 from ...agent.memory.loader import LoadingDock
 
+DataSourceType = Literal[
+    "file-upload",
+    "hugging-face",
+    "kaggle",
+    "supabase",
+    "mongodb",
+    "google-sheets",
+    "demo"
+]
+
 # BASE MODEL CLASS
 class SessionBase(BaseModel):
     id: UUID = Field(default_factory=uuid4)
@@ -32,8 +42,7 @@ class SessionBase(BaseModel):
 # FASTAPI INPUT ENDPOINTS
 class BaseDataBy(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
-
-    data: pd.DataFrame | None = Field(default=None, exclude=True)
+    ds: pd.DataFrame | None = Field(default=None, exclude=True)
 
 class FileUploadData(BaseDataBy):
     """Data structure for file upload input method."""
@@ -46,7 +55,7 @@ class FileUploadData(BaseDataBy):
     def load(cls, values):
         try:
             df = LoadingDock.load_upload_file(cls)
-            cls.data = df
+            cls.ds = df
         except Exception as e:
             raise ValueError(f"Failed to process file upload: {e}")
         return values
@@ -61,7 +70,7 @@ class HuggingFaceData(BaseDataBy):
     def load(cls, values):
         try:
             df = LoadingDock.load_huggingface(cls.dataset_id, cls.config_name)
-            cls.data = df
+            cls.ds = df
         except Exception as e:
             raise ValueError(f"Failed to load from Hugging Face: {e}")
         return values
@@ -73,10 +82,10 @@ class KaggleData(BaseDataBy):
     file_name: str | None = None
 
     @model_validator(mode="after")
-    def load_from_kaggle(cls, values):
+    def load(cls, values):
         try:
             df = LoadingDock.load_kaggle(cls.dataset_id, cls.file_name)
-            cls.data = df
+            cls.ds = df
         except Exception as e:
             raise ValueError(f"Failed to load from Kaggle: {e}")
         return values
@@ -104,12 +113,39 @@ class GoogleSheetsData(BaseDataBy):
     range: str | None = None  # e.g., "A1:Z1000"
     access_token: str | None = None  # OAuth token from redirect
 
+class DemoTest(BaseDataBy):
+    ping: str = Field(default="ping")
+
+    @model_validator(mode="after")
+    def load(cls, values):
+        """
+        Output example:
+            {
+                "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+                "timestamp": "2025-10-20T14:05:08.510Z",
+                "input_method": "demo",
+                "service": "clean",
+                "data": {"ping": "ping"},
+                "user_input_tags": [
+                    "string"
+                ],
+                "model_objective": "string"
+            }
+        """
+        try:
+            import pandas as pd
+            from ...utils.settings import settings
+            file_path = str(settings.mock_data_path)
+            df = pd.read_csv(file_path)
+            cls.ds = df
+            return values
+        except Exception as e:
+            raise e
+
 class IncomingData(SessionBase):
-    input_method: Literal[
-        "file-upload", "hugging-face", "kaggle", "supabase", "mongodb", "google-sheets"
-    ]
+    input_method: DataSourceType = Field(default="demo")
     service: Literal["clean", "insights"] = Field(default="insights")
-    data: dict[str, Any] | FileUploadData | HuggingFaceData | KaggleData | SupabaseData | MongoDBData | GoogleSheetsData = Field(default={})
+    data: dict[str, Any] | FileUploadData | HuggingFaceData | KaggleData | SupabaseData | MongoDBData | GoogleSheetsData | DemoTest = Field(default={}, init=False)
 
     @property
     def get_session_window(self):
@@ -159,7 +195,8 @@ class IncomingData(SessionBase):
                     self.data = GoogleSheetsData(**self.data)
                 else:
                     raise ValueError("google-sheets expects a string (spreadsheet_id) or dict")
-
+            elif self.input_method == "demo":
+                self.data = DemoTest()
             else:
                 raise ValueError(f"Unknown input_method: {self.input_method}")
 
@@ -178,7 +215,8 @@ class InsightForm(IncomingData):
     description: str | None = None
     service: str = "insights"
 
-########## RESPONSE ENDPOINTS
+########## RESPONSE
+
 # sockets
 class Output(Message):
     pass

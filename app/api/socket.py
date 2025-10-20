@@ -83,21 +83,32 @@ async def agent_window(request: Request, room_id: str, service: str):
     # Get error message from query params if present
     error_message = request.query_params.get("error")
 
+    # Check if room exists, but allow error messages to be displayed regardless
     if room_id not in manager.rooms and not error_message:
         logger.warning(f"Attempt to access non-existent room: {room_id}")
         return HTMLResponse(content="Room not found", status_code=404)
 
     # Detect if this is an EventSource (SSE) request
+    # Don't start SSE stream if there's an error or room doesn't exist
     if request.headers.get("accept") == "text/event-stream":
-        logger.info(f"Starting SSE stream for {room_id}:{service}")
-        return StreamingResponse(generate_stream(room_id, service), media_type="text/event-stream")
+        if error_message:
+            # Return error event and close stream immediately
+            async def error_stream():
+                yield f"event: error\ndata: {error_message}\n\n"
+                yield f"event: close\ndata: Stream closed due to error\n\n"
+            logger.info(f"Returning error stream for {room_id}:{service}")
+            return StreamingResponse(error_stream(), media_type="text/event-stream")
 
-    # Otherwise, serve the HTML page
-    logger.info(f"Serving HTML window for {room_id}:{service}")
+        if room_id in manager.rooms:
+            logger.info(f"Starting SSE stream for {room_id}:{service}")
+            return StreamingResponse(generate_stream(room_id, service), media_type="text/event-stream")
+
+    # Otherwise, serve the HTML page (works for both error and success cases)
+    logger.info(f"Serving HTML window for {room_id}:{service}" + (" with error" if error_message else ""))
     return templates.TemplateResponse("index.html", {
         "request": request,
         "room_id": room_id,
         "service": service,
-        "stream": "Connecting . . .",
+        "stream": "Error occurred" if error_message else "Connecting . . .",
         "error": error_message
     })

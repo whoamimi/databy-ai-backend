@@ -38,7 +38,7 @@ async def list_huggingface_datasets(
     if domain not in HUGGINGFACE_BROWSE_CONFIG:
         raise HTTPException(status_code=400, detail=f"Invalid domain: {domain}")
     try:
-        ids = [ds_id for ds_id in search_hugging_dataset(domain=domain, dataset_name=dataset_name, limit=limit)]
+        ids = list(*search_hugging_dataset(domain=domain, dataset_name=dataset_name, limit=limit))
         return HuggingFaceListResponse(dataset_ids=ids)
     except Exception as e:
         # Optionally log error

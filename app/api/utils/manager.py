@@ -3,6 +3,8 @@ app.api.manager.connection
 
 Connection Manager Handler
 
+TODO: remove this before i remove myself
+
 """
 import asyncio
 import logging
@@ -12,12 +14,6 @@ logger = logging.getLogger("uvicorn")
 
 MAX_ROOMS = 50
 SESSION_TIMEOUT_IDLE = 1200  # 20 min
-
-def mock_invoker(inputs: str):
-    print(f"User input: {inputs}")
-    from .schemas import Output
-    return Output(role="assistant", content="Hello I am good too thanks!")
-
 
 class ConnectionManager:
     """Manages active SSE/WebSocket connections."""
@@ -84,9 +80,7 @@ class ConnectionManager:
                 return room
             raise ValueError(f"Room {room_id} not found")
 
-    # --------------------------------------------------
-    # Countdown logic
-    # --------------------------------------------------
+
     async def _countdown(self, room_id: str):
         """Background coroutine that expires a room after idle timeout."""
         try:

@@ -174,6 +174,7 @@ class Settings:
     static_path: Path = field(init=False)
     template_path: Path = field(init=False)
     cli_path: Path = field(init=False)
+    mock_data_path: Path = field(init=False)
 
     # AGENT
     agent: AgentBuild = field(init=False)
@@ -187,6 +188,7 @@ class Settings:
         self.static_path = self.root_dir / "app" / "static"
         self.template_path = self.root_dir / "app" / "templates"
         self.cli_path = self.root_dir / "app" / "config" / "cli.yaml"
+        self.mock_data_path = self.root_dir / "data" / "input" / "dirty_cafe_sales.csv"
 
         logger.info(f"Default directory to: {self.root_dir}")
 
@@ -212,9 +214,5 @@ class Settings:
     @property
     def root_path(self):
         return str(self.root_dir)
-
-    @property
-    def docs_path(self):
-        return str(self.docs_local_path)
 
 settings = Settings()

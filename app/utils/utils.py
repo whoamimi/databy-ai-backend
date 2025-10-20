@@ -10,13 +10,6 @@ import yaml
 import argparse
 
 from pathlib import Path
-from typing import Iterable, Sequence
-
-from rich import box
-from rich.console import Group
-from rich.panel import Panel
-from rich.table import Table
-from rich.text import Text
 
 ROOT_DIR_NAME = 'backend'
 
@@ -81,29 +74,3 @@ def build_parser():
             sub.set_defaults(func=globals().get(func_name))
 
     return parser
-
-def build_cli_panel(
-    *,
-    title: str,
-    info_lines: Iterable[str],
-    commands: Sequence[tuple[str, str]],
-    border_style: str = "magenta",
-) -> Panel:
-    """Create a Rich ``Panel`` combining status lines and command table."""
-
-    info_text = Text.from_markup("\n".join(line.rstrip() for line in info_lines if line is not None))
-    table = Table(show_header=True, header_style="bold cyan", box=box.SIMPLE)
-    table.add_column("Command", style="green", width=20)
-    table.add_column("Description", style="white")
-
-    for command, description in commands:
-        table.add_row(command, description)
-
-    content = Group(info_text, table)
-
-    return Panel(
-        content,
-        title=f"[bold magenta]{title}[/bold magenta]",
-        border_style=border_style,
-        padding=(1, 2),
-    )

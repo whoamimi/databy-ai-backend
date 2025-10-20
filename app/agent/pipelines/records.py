@@ -9,8 +9,6 @@ from typing import Literal
 from datetime import datetime
 from dataclasses import dataclass, field
 
-from ..actions.statistical_methods import *
-from ..actions.missing_tools import *
 from ..core._skeleton import ActionSpace
 
 ################################ PIPELINE CONFIG
@@ -39,9 +37,14 @@ MISSING_STEPS_HEADER: list = [
     ("1. Classify each missing data value type category."),
     ("2. Return the method to evaluate the missing values that exist for each data field column.")
 ]
+
 ANOMALIES_STEPS_HEADER: list = [
-    ()
+    ("1. Identify and categorize the types of anomalies (e.g., statistical outliers, logical inconsistencies, or domain violations)."),
+    ("2. Apply statistical or rule-based detection methods to locate anomalous records across data columns."),
+    ("3. Evaluate the impact of anomalies on downstream analysis or model performance."),
+    ("4. Determine appropriate handling strategies such as correction, transformation, or exclusion.")
 ]
+
 MAX_DEPTH_ANALYSIS: int = 3
 
 @dataclass(frozen=True)
@@ -51,6 +54,8 @@ class PipelineConfig:
     max_sample_size = MAX_SAMPLE_SIZE
     missing_val_operations = MISSING_VAL_OPERATIONS
     missing_val_resolvers = MISSING_VAL_RESOLVERS
+    missing_steps_header = MISSING_STEPS_HEADER
+    anomalies_steps_header = ANOMALIES_STEPS_HEADER
 
 ################################ PIPELINE SCHEMAS / ROLLING WINDOW REPORTS
 
