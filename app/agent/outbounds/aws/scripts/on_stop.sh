@@ -1,20 +1,16 @@
 #!/bin/bash
-# Emergency stop script for all AWS services that incur costs
-# Stops/deletes SageMaker endpoints, Bedrock agents, and other billable resources
+# AWS Stop Script - Stop SageMaker and Bedrock Services
+# Stops all cost-incurring AWS resources
 set -e  # Exit on any error
 
 echo "==================================="
-echo "Closing Session with AWS"
+echo "Stopping AWS Services"
 echo "==================================="
 echo ""
-echo "⚠️  WARNING: This will stop/delete ALL active AWS resources that incur charges!"
-echo "This includes:"
-echo "  - SageMaker Endpoints (actively running)"
-echo "  - SageMaker Training Jobs"
-echo "  - SageMaker Transform Jobs"
+echo "⚠️  This will stop all active billable resources:"
+echo "  - SageMaker Endpoints"
+echo "  - SageMaker Training/Transform/Processing Jobs"
 echo "  - SageMaker Notebook Instances"
-echo "  - Bedrock Model Invocation Endpoints"
-echo "  - Lambda functions with provisioned concurrency"
 echo ""
 
 # Read configuration from environment or arguments
@@ -233,116 +229,9 @@ fi
 echo ""
 
 # ====================
-# 6. BEDROCK PROVISIONED THROUGHPUT
+# 6. SUMMARY
 # ====================
-echo "=== 6. Checking Bedrock Provisioned Throughput ==="
-PROVISIONED_MODELS=$(aws bedrock list-provisioned-model-throughputs \
-    --region "$REGION" \
-    --query "provisionedModelSummaries[?status=='InService'].provisionedModelName" \
-    --output text 2>/dev/null || echo "")
-
-if [ -n "$PROVISIONED_MODELS" ]; then
-    MODEL_COUNT=$(echo "$PROVISIONED_MODELS" | wc -w)
-    echo "Found $MODEL_COUNT provisioned model(s):"
-
-    for MODEL in $PROVISIONED_MODELS; do
-        echo "  🤖 $MODEL"
-        echo "    ⚠️  Note: Bedrock provisioned throughput must be deleted manually"
-        echo "    Run: aws bedrock delete-provisioned-model-throughput --provisioned-model-id <id>"
-    done
-else
-    echo "  ✓ No provisioned models found"
-fi
-echo ""
-
-# ====================
-# 7. EC2 INSTANCES WITH SPECIFIC TAGS
-# ====================
-echo "=== 7. Checking EC2 Instances (DataBy tagged) ==="
-EC2_INSTANCES=$(aws ec2 describe-instances \
-    --region "$REGION" \
-    --filters "Name=tag:Project,Values=DataBy" "Name=instance-state-name,Values=running" \
-    --query "Reservations[].Instances[].InstanceId" \
-    --output text 2>/dev/null || echo "")
-
-if [ -n "$EC2_INSTANCES" ]; then
-    INSTANCE_COUNT=$(echo "$EC2_INSTANCES" | wc -w)
-    echo "Found $INSTANCE_COUNT running instance(s):"
-
-    for INSTANCE in $EC2_INSTANCES; do
-        echo "  💻 $INSTANCE"
-
-        if [ "$DRY_RUN" != "true" ]; then
-            if aws ec2 stop-instances \
-                --region "$REGION" \
-                --instance-ids "$INSTANCE" 2>/dev/null; then
-                echo "    ✓ Stopping"
-                TOTAL_STOPPED=$((TOTAL_STOPPED + 1))
-            else
-                handle_error "Failed to stop EC2 instance: $INSTANCE"
-            fi
-        else
-            echo "    [DRY RUN] Would stop"
-        fi
-    done
-else
-    echo "  ✓ No tagged EC2 instances found"
-fi
-echo ""
-
-# ====================
-# 8. LAMBDA PROVISIONED CONCURRENCY
-# ====================
-echo "=== 8. Checking Lambda Provisioned Concurrency ==="
-LAMBDA_FUNCTIONS=$(aws lambda list-functions \
-    --region "$REGION" \
-    --query "Functions[].FunctionName" \
-    --output text 2>/dev/null || echo "")
-
-if [ -n "$LAMBDA_FUNCTIONS" ]; then
-    echo "Checking Lambda functions for provisioned concurrency..."
-    PROVISIONED_FOUND=false
-
-    for FUNC in $LAMBDA_FUNCTIONS; do
-        PROVISIONED=$(aws lambda get-provisioned-concurrency-config \
-            --region "$REGION" \
-            --function-name "$FUNC" \
-            --qualifier "\$LATEST" \
-            --query "AllocatedProvisionedConcurrentExecutions" \
-            --output text 2>/dev/null || echo "")
-
-        if [ -n "$PROVISIONED" ] && [ "$PROVISIONED" != "None" ]; then
-            echo "  ⚡ $FUNC (Provisioned: $PROVISIONED)"
-            PROVISIONED_FOUND=true
-
-            if [ "$DRY_RUN" != "true" ]; then
-                if aws lambda delete-provisioned-concurrency-config \
-                    --region "$REGION" \
-                    --function-name "$FUNC" \
-                    --qualifier "\$LATEST" 2>/dev/null; then
-                    echo "    ✓ Removed provisioned concurrency"
-                    TOTAL_STOPPED=$((TOTAL_STOPPED + 1))
-                else
-                    handle_error "Failed to remove provisioned concurrency: $FUNC"
-                fi
-            else
-                echo "    [DRY RUN] Would remove provisioned concurrency"
-            fi
-        fi
-    done
-
-    if [ "$PROVISIONED_FOUND" = false ]; then
-        echo "  ✓ No provisioned concurrency found"
-    fi
-else
-    echo "  ✓ No Lambda functions found"
-fi
-echo ""
-
-# ====================
-# 9. COST SUMMARY
-# ====================
-echo "=== 9. Estimated Cost Impact ==="
+echo "=== 6. Summary ==="
 if [ "$DRY_RUN" = "true" ]; then
     echo "ℹ️  Dry run mode - no resources were modified"
 else
@@ -367,36 +256,8 @@ else
 fi
 echo ""
 
-# ====================
-# 10. RECOMMENDATIONS
-# ====================
-echo "=== 10. Additional Recommendations ==="
-cat <<EOF
-To further reduce costs:
-
-1. Check S3 buckets for large data:
-   aws s3 ls --region $REGION
-   aws s3api list-buckets --query 'Buckets[].Name'
-
-2. Review CloudWatch Logs retention:
-   aws logs describe-log-groups --region $REGION
-
-3. Check for unused EBS volumes:
-   aws ec2 describe-volumes --region $REGION --filters "Name=status,Values=available"
-
-4. Review NAT Gateway usage (if using VPC):
-   aws ec2 describe-nat-gateways --region $REGION
-
-5. Check for unused Elastic IPs:
-   aws ec2 describe-addresses --region $REGION --query 'Addresses[?AssociationId==null]'
-
-6. Monitor costs with:
-   aws ce get-cost-and-usage --time-period Start=$(date -d '7 days ago' +%Y-%m-%d),End=$(date +%Y-%m-%d) --granularity DAILY --metrics BlendedCost
-
-EOF
-
 echo "==================================="
-echo "Cleanup Complete"
+echo "Stop Complete"
 echo "==================================="
 
 if [ $ERRORS -gt 0 ]; then
