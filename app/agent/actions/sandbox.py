@@ -7,9 +7,9 @@ Jupyter Kernel Manager.
 from dataclasses import dataclass, field
 from jupyter_client import KernelManager # type: ignore
 
-from ..core._skeleton import Actuator
+from ..core._skeleton import ActionSpace
 
-sandbox_actions = Actuator('jupyter-notebook')
+sandbox_actions = ActionSpace('jupyter-notebook')
 
 MAX_TIMEOUT = 5
 EXC_STATES = ("IDLE", "RUNNING", "COMPLETE")

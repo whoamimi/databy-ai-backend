@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en" theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gaby AI — Agent Window</title>
+  <link rel="stylesheet" href="/static/css/styles.css" />
+</head>
+<body>
+  <main class="agent-window">
+    <section class="orb-zone">
+      <div class="orb" id="orb">
+        <div class="orb-core"></div>
+      </div>
+      <div class="agent-state-text" id="agent-status">{{ stream }}</div>
+    </section>
+
+    <aside class="log-box">
+      <header class="log-header">
+        <h3>Action History</h3>
+        <div class="log-controls">
+          <button id="pause-btn">Pause</button>
+          <button id="clear-btn">Clear</button>
+        </div>
+      </header>
+      <div class="log-body" id="log-body"></div>
+    </aside>
+  </main>
+
+  <footer class="footer">
+    <span id="connection-dot" class="status-dot disconnected"></span>
+    <span id="connection-label">Disconnected</span>
+    <span class="footer-note">DataBy AI © 2025</span>
+  </footer>
+
+  <!-- Error Dialog Modal -->
+  {% if error %}
+  <div id="error-modal" class="modal">
+    <div class="modal-content error">
+      <div class="modal-header">
+        <h3>⚠️ Session Error</h3>
+        <button class="modal-close" onclick="closeErrorModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p>{{ error }}</p>
+      </div>
+      <div class="modal-footer">
+        <button onclick="closeErrorModal()" class="btn-primary">Close</button>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <script>
+    const roomId = "{{ room_id }}";
+    const service = "{{ service }}";
+    const hasError = {{ 'true' if error else 'false' }};
+
+    function closeErrorModal() {
+      const modal = document.getElementById('error-modal');
+      if (modal) modal.style.display = 'none';
+    }
+
+    // Show modal on load if error exists
+    if (hasError) {
+      window.addEventListener('DOMContentLoaded', () => {
+        const modal = document.getElementById('error-modal');
+        if (modal) modal.style.display = 'flex';
+      });
+    }
+  </script>
+  <script type="module" src="/static/js/main.js"></script>
+</body>
+</html>

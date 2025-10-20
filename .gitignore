@@ -207,6 +207,5 @@ __marimo__/
 .env
 start.sh
 
-docs/
 data/
-app/api/docs.py
+app/utils/checks.py

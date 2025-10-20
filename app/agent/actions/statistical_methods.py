@@ -19,9 +19,9 @@ from sklearn.metrics import roc_auc_score
 from sklearn.cluster import KMeans
 import statsmodels.api as sm
 
-from ..core._skeleton import Actuator
+from ..core._skeleton import ActionSpace
 
-statistical_methods = Actuator('statistical_methods')
+statistical_methods = ActionSpace('statistical_methods')
 
 # ====================================================
 # Helpers

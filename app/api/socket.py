@@ -6,21 +6,21 @@ Agent's Streaming Window to display decision-tree and actions.
 
 import asyncio
 import logging
-from uuid import uuid4
+
+# from starlette.requests import Request
 from fastapi import APIRouter, Request
 from fastapi.templating import Jinja2Templates
-from fastapi.responses import HTMLResponse, StreamingResponse, RedirectResponse
-from starlette.requests import Request
+from fastapi.responses import HTMLResponse, StreamingResponse, RedirectResponse, JSONResponse
 
 from ..utils.settings import settings
-from .utils.connection import ConnectionManager
-from .utils.schemas import Room
+from .utils.manager import ConnectionManager
+from .utils.schemas import CleanForm
 
 logger = logging.getLogger("uvicorn")
 window: APIRouter = APIRouter(prefix="/agent")
+templates = Jinja2Templates(directory=str(settings.template_path))
 
 manager: ConnectionManager = ConnectionManager()
-templates = Jinja2Templates(directory=str(settings.static_path))
 
 async def generate_stream(room_id: str, service: str):
     """
@@ -30,49 +30,65 @@ async def generate_stream(room_id: str, service: str):
     TODO: STREAM TEXTS / STATUS FROM OBJ AGENTSTATUS
     """
 
-    stop_event = await manager.get_room(room_id)
+    room = await manager.get_room(room_id)
     logger.info(f"Starting stream for {room_id}:{service}")
 
-    while not stop_event.is_set():
-        await asyncio.sleep(1.5)
-        message = f"Active Streams: {manager.total_active} from {service} (room {room_id})\n\n"
-        yield message.encode("utf-8")
+    try:
+        while not room.event.is_set():
+            await asyncio.sleep(1.5)
+            message = f"{room.id}: {room.agent.state_message}"
+            # Proper SSE format
+            yield f"state: {message}\n\n"
+    except Exception as e:
+        logger.error(f"Stream error for {room_id}:{service}\n{e}")
+    finally:
+        logger.info(f"Stream ended for {room_id}:{service}")
+        yield f"State: [System] Stream closed for {room_id}:{service}\n\n"
+        await manager.remove(str(room.id))
+        yield f"Room Session has been closed."
 
-    logger.info(f"Stream ended for {room_id}:{service}")
-    yield f"data: [System] Stream closed for {room_id}:{service}\n\n".encode("utf-8")
-
-
-async def start_agent_window(service: str):
-    """ Utility Redirecting fn to respective page and session. """
-
-    room = Room(service=service)
-    room_id = str(room.id)
-    await manager.add(room)
-    return RedirectResponse(url=f"/agent/window/{room_id}/{service}")
-
-@window.get("/clean/")
-async def start_data_cleaning():
+@window.post("/start-wrangler")
+async def start_wrangler_session(inputs: CleanForm):
     """
-    Auto-creates a new isolated streaming session and redirects
-    to /window/{room_id}/{service}.
-    """
-    await start_agent_window(service="clean")
+    Launches the appropriate data wrangling service (clean or insights)
+    based on the request payload.
 
-@window.get("/analytics/")
-async def start_data_dashboard():
-    """
-    Auto-creates a new isolated streaming session and redirects
-    to /window/{room_id}/{service}.
-    """
-    await start_agent_window(service="analytics")
+    Args:
+        upload_type (str): One of ["file-upload", "hugging-face", "kaggle",
+                                   "supabase", "mongodb", "google-sheets"]
+        inputs (IncomingData): Automatically validated and parsed input payload.
 
-@window.get("/window/{room_id}/{service}", response_class=HTMLResponse)
+    Returns:
+        RedirectResponse: Always redirects to agent window, even on error.
+    """
+    room_id = str(inputs.id)
+
+    try:
+        session = inputs.get_session_window
+        await manager.add(session)
+        # session.countdown_task = asyncio.create_task(manager.countdown(room_id))
+        return RedirectResponse(url=f"/agent/{room_id}/clean", status_code=303)
+    except Exception as e:
+        # Log the error but still redirect to show it in the agent window
+        logger.error(f"Error starting session {room_id}: {e}")
+        # Create a minimal error session to display the error
+        error_message = str(e)
+        return RedirectResponse(
+            url=f"/agent/{room_id}/clean?error={error_message}",
+            status_code=303
+        )
+
+@window.get("/{room_id}/{service}", response_class=HTMLResponse)
 async def agent_window(request: Request, room_id: str, service: str):
     """
     Serves both the HTML streaming interface and, if requested with the appropriate
     'Accept' header, streams live Server-Sent Events (SSE) updates.
     """
-    if room_id not in manager.rooms:
+
+    # Get error message from query params if present
+    error_message = request.query_params.get("error")
+
+    if room_id not in manager.rooms and not error_message:
         logger.warning(f"Attempt to access non-existent room: {room_id}")
         return HTMLResponse(content="Room not found", status_code=404)
 
@@ -86,5 +102,7 @@ async def agent_window(request: Request, room_id: str, service: str):
     return templates.TemplateResponse("index.html", {
         "request": request,
         "room_id": room_id,
-        "service": service
+        "service": service,
+        "stream": "Connecting . . .",
+        "error": error_message
     })

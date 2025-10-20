@@ -1,0 +1,6 @@
+bedrock-agent:
+  - model_name: "base"
+    model_id: "anthropic.claude-haiku-4-5-20251001-v1:0"
+sagemaker:
+  - model_name: "custom-model"
+    endpoint_name: "custom-endpoint"

@@ -92,8 +92,6 @@ class StoryNarrater(Spine, model_name="base", prompt=NarratePrompt):
     """ Story Telling / Summarizing agent. """
 
     def pre_process(self, obj):
-        # TODO:
-        # DB preparation - Grab the history summaries for 3 >= historical data
         df = pd.DataFrame(obj.last_narration) # type: ignore
         return {"history": df.to_markdown(index=False)}
 
@@ -145,7 +143,7 @@ class RevisionWorker(Spine, model_name="base", prompt=revisionWorkerPrompt):
         # TODO: check if require any further changes.
         return kwargs
 
-class SherlockHolmes(Spine, model_name="base", prompt=questionPrompt):
+class Curious(Spine, model_name="base", prompt=questionPrompt):
     def pre_process(self, **kwargs):
         # TODO: check if require any further changes.
         return kwargs
@@ -156,7 +154,7 @@ class StateAction:
     exploit: Exploit = field(default_factory=Exploit, init=False)
     explore: Explore = field(default_factory=Explore, init=False)
     plan: Planner = field(default_factory=Planner, init=False)
-    question: SherlockHolmes = field(default_factory=SherlockHolmes, init=False)
+    question: Curious = field(default_factory=Curious, init=False)
 
 @dataclass(frozen=True)
 class StateCondition:

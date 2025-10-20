@@ -24,7 +24,7 @@ FACT_PATHS = {
 }
 MEMORY_LOBE = Literal[FACT_PATHS]
 
-class LifeCycle:
+class LoadingDock:
     """ Kth Session Data Cycler. E.g. stores data in HF (Temp), AWS (Long) & Params to Agent's Bayes Belief Net in aws - TODO: confirm model's serving platform as this is compute heavy.
     """
 
@@ -115,3 +115,4 @@ class FactTable:
     def __init__(self, load_paths: dict = FACT_PATHS):
         self.load_paths = load_paths
         self.data_types = pd.read_csv(load_paths["data_types"])
+

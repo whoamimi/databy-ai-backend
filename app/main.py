@@ -5,13 +5,14 @@ TODO: DOCUMENT ENDPOINT FOR THE FASTAPI APP....
 """
 
 import logging
+from discord import HTTPException
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.staticfiles import StaticFiles
 
+from .api.utils.schemas import CleanForm, InsightForm
 from .utils.settings import settings
-
-# from .api.docs import docs_router
 from .api.socket import window
 
 logger = logging.getLogger("uvicorn")
@@ -22,8 +23,8 @@ app = FastAPI(
     description=settings.app_description,
     version=settings.app_version,
 )
-# CORS middleware for NextJS dev server (adjust origins in settings)
 
+# CORS middleware for NextJS dev server (adjust origins in settings)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -34,14 +35,16 @@ app.add_middleware(
         "http://localhost:8080",
         "http://127.0.0.1:8080",
     ],
-    allow_credentials=True,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# app.include_router(docs_router)
+# Mount static files BEFORE including routers
+app.mount("/static", StaticFiles(directory=str(settings.static_path)), name="static")
+
+# Include routers
 app.include_router(window)
-# app.include_router(agent_window_router)
 
 @app.get("/")
 async def root():
@@ -49,8 +52,7 @@ async def root():
 
     return {
         "message": "Welcome to" + settings.app_title + "!",
-        "version": settings.app_version,
-        "documentation": settings.docs_endpoint
+        "version": settings.app_version
     }
 
 @app.get("/health")

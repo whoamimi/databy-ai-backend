@@ -10,7 +10,8 @@ from datetime import datetime
 from dataclasses import dataclass, field
 
 from typing import (
-    Callable
+    Callable,
+    Any
 )
 
 @dataclass
@@ -23,7 +24,7 @@ class InputContent:
 class SpineListener:
     function: str
     input: InputContent = field(init=False)
-    output: ollama.ChatResponse = field(init=False)
+    output: ollama.ChatResponse | Any = field(init=False)
     created_timestamp: datetime = field(init=False, default=datetime.now())
 
 @dataclass
@@ -36,11 +37,11 @@ class Toolkit:
     def __post_init__(self):
         # TODO: ADD THIS TO THE PRE-PROCESSING OF THE PROMPTBUILDER
         # GETS ACTION TOOL and assign to the function
-        # action = Actuator.action(workflow_name=self.workflow_name, function_name=self.function.__name__)
+        # action = ActionSpace.action(workflow_name=self.workflow_name, function_name=self.function.__name__)
         # ASSIGNS META DESCRIPTORS OF THE FUNCTION TO PASS TO THE AGENT
-        from ._skeleton import Actuator
+        from ._skeleton import ActionSpace
 
-        self.meta = Actuator.get_meta(self.workflow_name, self.function.__name__)
+        self.meta = ActionSpace.get_meta(self.workflow_name, self.function.__name__)
 
 @dataclass
 class PromptBuilder:

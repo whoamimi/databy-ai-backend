@@ -164,6 +164,24 @@ dataset_meta_description:
     Data Values Sample:
     {data_samples}
 
+datatype:
+  prompt: |
+    Given the following dataset's column field name and sample values, classify the data type. You must choose **only one** label from the list below and respond **with the label name only** (no explanation, no punctuation, no additional text).
+
+    Possible data type labels:
+    - numeric: numbers that can be used for mathematical operations (integers, floats, counts, measurements)
+    - categorical: text or code values representing categories, groups, or labels
+    - datetime: dates, times, or timestamps
+    - text: free-form text or strings that don't fit other categories
+    - boolean: true/false or binary values
+
+    Ensure your response contains only the single word label.
+
+  input_template: |
+    Column name: {data_label}
+    Sample values:
+    {data_samples}
+
 datatype_numeric:
   prompt: |
     Given the following dataset's column field name and sample values, determine which data type best represents the nature of the data. You must choose **only one** label from the list below and respond **with the label name only** (no explanation, no punctuation, no additional text).

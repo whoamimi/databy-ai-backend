@@ -6,10 +6,10 @@ Actionable tools to handle missing values.
 
 import pandas as pd
 import numpy as np
-from ..core._skeleton import Actuator
+from ..core._skeleton import ActionSpace
 
 
-missing_val_resolver = Actuator('missing_val_resolver')
+missing_val_resolver = ActionSpace('missing_val_resolver')
 
 # === Individual strategy tools ===
 @missing_val_resolver
@@ -18,7 +18,7 @@ def drop_missing(df: pd.DataFrame, target_col: str) -> pd.DataFrame:
 
     if target_col not in df.columns:
         raise ValueError
-    
+
     return df.dropna()
 
 @missing_val_resolver

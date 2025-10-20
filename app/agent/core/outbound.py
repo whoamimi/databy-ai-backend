@@ -1,10 +1,26 @@
 """
-app.agent.core._utils
-
-Util helper functions for agent's core.
+app.agent.core.provider
 """
 
 import ollama
+
+from dataclasses import dataclass
+from ...utils.settings import settings
+
+def run_local(
+    inputs: list[dict],
+    model_id: str,
+    options,
+    host_url: str = settings.agent.server.ollama,
+):
+    client = ollama.Client(host_url)
+
+    return client.chat(
+        model=model_id,
+        messages=inputs,
+        stream=True,
+        options=options,
+    )
 
 async def validate_model_exists(client, model_id: str):
     try:

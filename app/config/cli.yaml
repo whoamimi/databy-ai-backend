@@ -72,22 +72,4 @@ commands:
         default: "ap-southeast-2"
         help: "AWS Region name (default: ap-southeast-2)"
 
-  configure-gcloud:
-    help: "Configure AWS credentials and default region to run Sagemaker / Bedrock runs."
-    func: configure_aws
-    args:
-      access_key:
-        flags: ["--access-key"]
-        type: str
-        help: "AWS Access Key ID"
-      secret_key:
-        flags: ["--secret-key"]
-        type: str
-        help: "AWS Secret Access Key"
-      region:
-        flags: ["--region"]
-        type: str
-        default: "ap-southeast-2"
-        help: "AWS Region name (default: ap-southeast-2)"
-
 default_command: null

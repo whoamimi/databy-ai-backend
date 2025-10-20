@@ -3,6 +3,11 @@ app.utils.settings
 
 Application settings and configuration.
 
+[backlog]
+TODO ADD CLI COMMANDS
+- AWS Profiling / SETUP
+- GCloud Profiling
+
 """
 
 import os
@@ -13,48 +18,43 @@ from dataclasses import dataclass, field
 from typing import Literal
 
 from  ..utils.utils import setup_dev_workspace
+#from .logger import setup_logging
 
 if os.getenv("LOG_LEVEL", "DEBUG") == "DEBUG":
     from dotenv import load_dotenv
+
     load_dotenv('.env')
 
 logger = logging.getLogger("uvicorn")
 
 @dataclass
-class ModelConfig:
-    dev: str = field(default="", repr=False)
-    prod: str = field(default="", repr=False)
+class GenAIConfig:
+    model_name: str = field(default="", repr=True)
+    model_id: str = field(default="", repr=True)
     url: str = field(default="", repr=True)
     alt: list[str] = field(default_factory=list, repr=False)
 
-    model_id: str = field(init=False, repr=True)
-    source: Literal['dev', 'prod'] = field(default="dev", repr=False)
-
-    def __post_init__(self):
-        self.model_id = self.dev if self.source == 'dev' else self.prod
-
 @dataclass
 class AgentConfigBuild:
-    config_path: Path
-    prompt_paths: dict = field(init=False)
-    model_paths: dict = field(init=False)
+    config_path: Path = field(init=True, repr=False)
+    prompt_paths: dict = field(init=False, repr=False, default_factory=dict)
+    model_paths: dict = field(init=False, repr=False, default_factory=dict)
     model_catalogue: dict = field(init=False)
     prompts: dict = field(init=False)
 
     def __post_init__(self):
-        self.prompt_paths = {
-            "skeleton": self.config_path / "prompt_skeleton.yaml",
-            "awsand": self.config_path / "prompt_awsand.yaml",
-            "bigquery": self.config_path / "prompt_bigquery.yaml"
-        }
+        self.prompt_paths["skeleton"] = self.config_path / "prompt_skeleton.yaml"
+        self.prompt_paths["awsand"] = self.config_path / "prompt_awsand.yaml"
+        self.prompt_paths["bigquery"] = self.config_path / "prompt_bigquery.yaml"
+        self.model_paths["model"] = self.config_path / "model.yaml"
 
-        self.model_paths = {
-            "model": self.config_path / "model.yaml",
-            "genai": self.config_path / "genai.yaml"
-        }
+        if os.getenv("DEVELOPMENT", "DEV") != "PROD":
+            self.model_paths["genai"] = self.config_path / "dev_genai.yaml"
+        else:
+            self.model_paths["genai"] = self.config_path / "prod_genai.yaml"
 
         self.model_catalogue = self.load_agent_stack(str(self.model_paths['genai'])) or {}
-        self.prompts = self.load_prompts_from_path(self.prompt_paths['skeleton'])
+        self.prompts = self.load_prompts_from_path(str(self.prompt_paths['skeleton']))
 
     @staticmethod
     def load_agent_stack(file_path: str):
@@ -64,21 +64,23 @@ class AgentConfigBuild:
         try:
             with open(file_path, "r") as f:
                 for file in yaml.safe_load(f):
-                    genai.update({
-                        file.get('model_name'):
-                            ModelConfig(
-                                dev=file.get('model_id', ''),
-                                prod=file.get('model_id', ''),
+
+                    if model_name := file.get("model_name", None):
+                        genai[model_name] = GenAIConfig(
+                                model_id=file.get("model_id", ""),
+                                model_name=model_name,
                                 url=file.get('url', None),
                                 alt=file.get('alt', None)
                             )
-                    })
+                    else:
+                        raise ValueError(f"Error loading GENAI Configuration. Model Name must be configured for {file}")
             return genai
         except Exception as e:
             logger.error(e)
 
     @staticmethod
     def load_prompts_from_path(file_path: str):
+        """ Loads yaml file type from path. """
 
         with open(file_path, "r") as f:
             return yaml.safe_load(f)
@@ -103,25 +105,24 @@ class AgentServerBuild(Sandbox):
 
 @dataclass(frozen=True)
 class AWSConfig:
-    # iam role
-    region: str = field(default=os.getenv("AWS_DEFAULT_REGION", ""))
+    # workspace (iam) role setup
+    region: str = field(default=os.getenv("AWS_REGION", ""))
     access_key_id: str = field(default=os.getenv("AWS_ACCESS_KEY_ID", ""))
     secret_access_key: str = field(default=os.getenv("AWS_SECRET_ACCESS_KEY", ""))
 
+    # sagemaker setup
+    sagemaker_user_id: str = field(default=os.getenv("AWS_SAGEMAKER_USER_ID", ""))
     sagemaker_domain_id: str = field(default=os.getenv("AWS_SAGEMAKER_DOMAIN_ID", ""))
-    s3_bucket: str = field(default=os.getenv("AWS_S3_BUCKET", ""))
+    sagemaker_service_role: str = field(default=os.getenv("AWS_SAGEMAKER_SERVICE_ROLE", ""))
 
-    # client setup
-    boto_client: str = field(default="iam")
-    iam_role: str = field(default="SageMaker")
-    # service roles
-    sagemaker_service_role: str = field(default="sagemaker")
-    bedrock_service_role: str = field(default=os.getenv("AWS_BEDROCK_SERVICE_ROLE", ""))
-    bedrock_agencore_service_role: str = field(default="bedrock-agentcore")
+    # bedrock roles
+    bedrock_service_role: str = field(default="bedrock")
+    bedrock_agentcore_service_role: str = field(default="bedrock-agentcore")
 
-    # ec2 instance default setup
+    # DEFAULT INSTANCE SETUP (for model training). Maybe removed in future.
     instance_count: int = field(default=1)
     instance_type: str = field(default="ml.t3.medium")
+    s3_bucket: str = field(default=os.getenv("AWS_S3_BUCKET", ""))
 
 @dataclass(frozen=True)
 class GCConfig:
@@ -132,18 +133,21 @@ class GCConfig:
 
 @dataclass(frozen=True)
 class LightningConfig:
+    user_name: str = field(default=os.getenv("LIGHTNING_USER_NAME", ""))
     api_key: str = field(default=os.getenv("LIGHTNING_API_KEY", ""))
+    # STUDIO workspace setup
+    studio_name: str = field(default="miplayground")
+
+@dataclass(frozen=True)
+class AgentDatabase:
+    hf_user: str = field(default=os.getenv("HF_USERNAME", ""))
+    hf_token: str = field(default=os.getenv("HF_API_KEY", ""))
 
 @dataclass(frozen=True)
 class AgentCloud:
     aws: AWSConfig = field(default_factory=AWSConfig)
     gcloud: GCConfig = field(default_factory=GCConfig)
     lightning: LightningConfig = field(default_factory=LightningConfig)
-
-@dataclass(frozen=True)
-class AgentDatabase:
-    hf_user: str = field(default=os.getenv("HF_USER", ""))
-    hf_token: str = field(default=os.getenv("HF_API_KEY", ""))
 
 @dataclass(frozen=True)
 class AgentBuild:
@@ -160,7 +164,6 @@ class Settings:
     app_version: str = "0.1.0"
     app_host: str = "127.0.0.1"
     app_port: int = 8000
-    docs_endpoint: str = "/api/docs"
 
     # DEV WORKSPACE
     debug: bool = field(default=os.getenv("DEBUG", "True").lower() in ("1", "true", "yes", "y"))
@@ -168,8 +171,8 @@ class Settings:
 
     # DIR PATHS
     root_dir: Path = field(init=False)
-    docs_local_path: Path = field(init=False)
     static_path: Path = field(init=False)
+    template_path: Path = field(init=False)
     cli_path: Path = field(init=False)
 
     # AGENT
@@ -181,8 +184,8 @@ class Settings:
         logger.info("Running checks on workspace setup ...")
 
         self.root_dir = setup_dev_workspace()
-        self.docs_local_path = self.root_dir / "docs"
         self.static_path = self.root_dir / "app" / "static"
+        self.template_path = self.root_dir / "app" / "templates"
         self.cli_path = self.root_dir / "app" / "config" / "cli.yaml"
 
         logger.info(f"Default directory to: {self.root_dir}")

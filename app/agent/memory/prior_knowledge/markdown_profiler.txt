@@ -1,0 +1,15 @@
+| Field Name  | Type    | Missing Count | Missing % | Unique Count |
+|-------------|---------|---------------|-----------|--------------|
+| user_id     | int64   | 0             | 0.0       | 1000         |
+| name        | object  | 5             | 0.5       | 995          |
+| age         | int64   | 12            | 1.2       | 65           |
+| city        | object  | 3             | 0.3       | 45           |
+| purchases   | int64   | 8             | 0.8       | 150          |
+| spend       | float64 | 10            | 1.0       | 800          |
+
+## Statistical Summary
+| Metric          |     Min |     Max |    Mean | Median |     Std |
+|-----------------|--------:|--------:|--------:|-------:|--------:|
+| Age             |   18.00 |   85.00 |   42.35 |  41.00 |   15.23 |
+| Income          | 25000.0 | 250000.0| 75420.5 | 68000.0| 35210.8 |
+| Years_Experience|    0.00 |   40.00 |   12.45 |  10.00 |    8.67 |

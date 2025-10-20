@@ -1,14 +1,17 @@
 """
 app.agent.pipelines.records
+
 """
 
 import pandas as pd
-from dataclasses import dataclass, field
+from uuid import UUID
 from typing import Literal
+from datetime import datetime
+from dataclasses import dataclass, field
 
 from ..actions.statistical_methods import *
 from ..actions.missing_tools import *
-from ..core._skeleton import Actuator
+from ..core._skeleton import ActionSpace
 
 ################################ PIPELINE CONFIG
 DATA_SUMMARY_COLS = [
@@ -26,8 +29,20 @@ MIN_SAMPLE_SIZE = 25
 MAX_SAMPLE_SIZE = 300
 
 MISSING_TYPES: list = ['MAR', 'MNAR', 'MCAR']
-MISSING_VAL_OPERATIONS = Actuator.action_space(workflow_name='statistical_methods')
-MISSING_VAL_RESOLVERS = Actuator.action_space(workflow_name='missing_val_resolver')
+MISSING_VAL_OPERATIONS = ActionSpace.action_space(workflow_name='statistical_methods')
+MISSING_VAL_RESOLVERS = ActionSpace.action_space(workflow_name='missing_val_resolver')
+
+ANOMALIES_TYPE: list = ['conditional', 'collective', 'numeric', 'categorical', 'semantic']
+ANOMALIES_CAUSES: list = ["instrument", "human", "systematic-bias", "natural-novelty", "adversarial-behavior"]
+
+MISSING_STEPS_HEADER: list = [
+    ("1. Classify each missing data value type category."),
+    ("2. Return the method to evaluate the missing values that exist for each data field column.")
+]
+ANOMALIES_STEPS_HEADER: list = [
+    ()
+]
+MAX_DEPTH_ANALYSIS: int = 3
 
 @dataclass(frozen=True)
 class PipelineConfig:
@@ -38,68 +53,77 @@ class PipelineConfig:
     missing_val_resolvers = MISSING_VAL_RESOLVERS
 
 ################################ PIPELINE SCHEMAS / ROLLING WINDOW REPORTS
+
 @dataclass
 class Inputs:
+    id: UUID
     data: pd.DataFrame
+    created_timestamp: datetime
     user_input_tags: list | None = field(default=None)
     model_objective: str | None = field(default=None)
 
 @dataclass
-class StageExploreReport:
+class DataExplorerReport:
     description: str | None = field(init=False, default=None)
     data_types: dict | None = field(init=False, default=None)
     data_summary: pd.DataFrame | None = field(init=False, default=None)
 
 @dataclass
-class MissingColumnReport:
+class BaseColumnAnalysis:
     data_field_name: str
-    missing_type: Literal['MAR', 'MNAR', 'MCAR']
-    test_method: str
-    results: str
-
-@dataclass
-class MissingReport:
-    missing_report: list[MissingColumnReport] = field(default_factory=list)
-
-@dataclass
-class Session(StageExploreReport, MissingReport, Inputs):
-    pass
-
-################################ PIPELINE META - ignore - for interal use
-@dataclass(frozen=True)
-class PipelineStage:
-    name: str
-    order: int
+    eval_action: str
+    cause: str
     description: str
 
-AGENT_CLEAN_PROGRESS = [
-    PipelineStage(
-        name="Exploring",
-        order=1,
-        description="Scanning dataset structure, types, and basic statistics to understand its composition."
-    ),
-    PipelineStage(
-        name="Missing data",
-        order=2,
-        description="Detecting and quantifying missing values; determining if the missingness is random or systematic."
-    ),
-    PipelineStage(
-        name="Outliers",
-        order=3,
-        description="Identifying abnormal or extreme values using statistical thresholds or model-based detection."
-    ),
-    PipelineStage(
-        name="Dedupe values",
-        order=4,
-        description="Removing duplicate or nearly identical records to maintain dataset integrity."
-    ),
-    PipelineStage(
-        name="Wrapping up",
-        order=5,
-        description="Finalizing cleaning process, validating outputs, and summarizing transformations applied."
-    ),
-]
+@dataclass
+class BaseReport:
+    todo: dict = field(default_factory=dict) # next task to be actioned relative to the task
+    max_depth: int = field(default=MAX_DEPTH_ANALYSIS)
+
+@dataclass
+class MissingColumnReport(BaseColumnAnalysis):
+    missing_type: Literal['MAR', 'MNAR', 'MCAR']
+
+@dataclass
+class AnomaliesColumnReport(BaseColumnAnalysis):
+    anomlies_type: Literal['conditional', 'collective', 'numeric', 'categorical', 'semantic']
+
+    def __post_init__(self):
+        if self.cause not in ANOMALIES_CAUSES:
+            raise ValueError
+
+@dataclass
+class MissingReport(BaseReport):
+    report: list[MissingColumnReport] = field(default_factory=list)
+
+    @property
+    def to_dataframe(self):
+        if len(self.todo) == 0:
+            raise ValueError("Cannot proceed with empty dict.")
+        else:
+            df = pd.DataFrame(self.report)
+            df["next_action"] = df["data_field_name"].map(self.todo)
+            return df
+
+@dataclass
+class AnomaliesReport(BaseReport):
+    report: list[AnomaliesColumnReport] = field(default_factory=list)
+
+    @property
+    def to_dataframe(self):
+        if len(self.todo) == 0:
+            raise ValueError("Cannot proceed with empty dict.")
+        else:
+            df = pd.DataFrame(self.report)
+            df["next_action"] = df["data_field_name"].map(self.todo)
+            return df
+
+@dataclass
+class SessionProfiler(DataExplorerReport, MissingReport, AnomaliesReport, Inputs):
+    pass
 
 if __name__ == '__main__':
-    session = Session(data=pd.DataFrame())
+    from uuid import uuid4
+
+    session = SessionProfiler(id=uuid4(), data=pd.DataFrame(), created_timestamp=datetime.now())
     print(session)

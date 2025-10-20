@@ -113,11 +113,15 @@ websockets==15.0.1
 awscli
 boto3<=1.15.3
 sagemaker
+strands-agents
+bedrock-agentcore
+botocore
 
 # JUPYTER NOTEBOOK
-jupyterhub
-jupyterlab
-notebook
+# jupyterhub
+# jupyterlab
+# notebook
+# papermill
+lightning-sdk
 
 huggingface-cli
-strands-agents

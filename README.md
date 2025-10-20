@@ -1,6 +1,5 @@
 # DataBy AI - Autonomous Data Agent
 
-![PyPI version](https://img.shields.io/pypi/v/databy.svg)
 [![Documentation Status](https://readthedocs.org/projects/databy/badge/?version=latest)](https://databy.readthedocs.io/en/latest/?version=latest)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
@@ -46,10 +45,10 @@ This backend is designed with the needs of a solo developer in mind as an IAAS b
 
 #### Core Components
 
-- **Cognitive Engine**: AI-powered decision making and strategy selection
-- **Pipeline Manager**: Orchestrates data processing workflows
-- **Heartbeat System**: Real-time status monitoring and health checks
-- **Memory System**: Stores knowledge and learns from past processing
+- **Cognitive Engine**: AI-powered decision making and strategy selection.
+- **Gen AI Agent Pipeline Manager**: Orchestrates data processing workflows.
+- **Data Pipelines**: Data wrangling stages.
+- **Memory System**: Stores knowledge and learns from past processing.
 
 #### Pipeline Stages
 

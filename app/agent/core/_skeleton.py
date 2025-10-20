@@ -5,7 +5,7 @@ Defines the base framework for constructing agents.
 
 Base classes
 - Spine: Default agent builder
-- Actuator: Default toolkit
+- ActionSpace: Default toolkit
 
 """
 
@@ -15,7 +15,7 @@ import logging
 import docstring_parser
 from functools import wraps
 from abc import ABC, abstractmethod
-from typing import List, get_type_hints, Any
+from typing import List, get_type_hints, Any, Literal
 
 from ...utils.settings import settings
 from ._db import (
@@ -90,62 +90,64 @@ class Spine(ABC):
         msg = self.prompt.build_message(**input_kwargs)
         self._input_listener(msg, **kwargs)
 
-        #response: ollama.ChatResponse = await client.chat(
-        #    model=cls.model_id,
-        #    messages=msg
-        #)
-
-        # TODO: UPDATE
-        logger.warning("calling Mock ollama since in debug mode.")
-        response = ollama.ChatResponse(
-            model="yellow",
-            message=ollama.Message(role="user", content="hello")
+        response: ollama.ChatResponse = client.chat(
+            model=self.model_id,
+            messages=msg
         )
 
         self._output_listener(response)
         return self.post_process(response)
 
+    def generate(self, **kargs):
+        """ Configured for every subclass init based on serving method."""
+        return self._generate(**kwargs)
+
     @classmethod
-    def __init_subclass__(cls, model_name: str, prompt: PromptBuilder, **kwargs):
+    def __init_subclass__(cls, model_name: str, prompt: PromptBuilder, serve_type: Literal["local", "aws", "gcloud"] = "local", **kwargs):
         if model_name not in settings.agent.stack.model_catalogue:
             raise ValueError(f"Invalud {model_name} entered. Please update the model catalogue loaded from `agent/_config/genai.yaml` or requested model name. ")
 
         cls.prompt: PromptBuilder = prompt
         cls.model_name: str = model_name
         cls.model_id: str = settings.agent.stack.model_catalogue.get(cls.model_name, {}).model_id
+        cls.serve_type: str = serve_type
+
+        if cls.serve_type == "local":
+            from .outbound import run_local
+            cls._generate = run_local
 
         if cls.__name__ not in Spine.registry:
             Spine.registry.append(cls.__name__)
 
         return super().__init_subclass__(**kwargs)
 
-class Actuator:
-    """Class-based decorator that registers functions as agent tools."""
+class ActionSpace:
+    """Class-based decorator that registers all tool/action functions defined in this project."""
 
     workflow: dict[str, dict] = {}
     _action_space: dict[str, dict[str, Any]] = {}
 
     def __init__(self, workflow: str):
 
-        if workflow not in Actuator.workflow:
+        if workflow not in ActionSpace.workflow:
             print(f'First time registering {workflow}')
-            Actuator.workflow[workflow] = {}
-            Actuator._action_space[workflow] = {}
+            ActionSpace.workflow[workflow] = {}
+            ActionSpace._action_space[workflow] = {}
 
         self.current_workflow = workflow
 
     @classmethod
     def list_workflows(cls):
-        return list(Actuator.workflow)
+        return list(ActionSpace.workflow)
 
     @classmethod
     def action_space(cls, workflow_name: str):
         """ For agent to select function tools globally from any workflow. """
 
-        if workflow_name not in Actuator._action_space:
-            raise ValueError(f'Requested {workflow_name} does not exist in the Actuator. Please check if this function is defined otherwise revise requested tool.')
+        if workflow_name not in ActionSpace._action_space:
+            raise ValueError(f'Requested {workflow_name} does not exist in the ActionSpace. Please check if this function is defined otherwise revise requested tool.')
 
-        return Actuator._action_space[workflow_name]
+        return ActionSpace._action_space[workflow_name]
 
     @classmethod
     def get_action(cls, workflow_name: str, function_name: str):
@@ -162,10 +164,10 @@ class Actuator:
     def get_meta(cls, workflow_name: str, function_name: str):
         """ Returns the requested function. This is for the agent to use to call action by itself. """
 
-        if workflow_name not in Actuator.workflow or function_name not in Actuator.workflow[workflow_name]:
+        if workflow_name not in ActionSpace.workflow or function_name not in ActionSpace.workflow[workflow_name]:
             raise ValueError(f"Function {function_name} is not registry as a tool. Please use class decorator detailed in examples from doc.")
 
-        return Actuator.workflow[workflow_name].get(function_name, {})
+        return ActionSpace.workflow[workflow_name].get(function_name, {})
 
     def __call__(self, func):
         """Called when used as a decorator."""
@@ -201,7 +203,7 @@ class Actuator:
             properties[param_name] = {"type": arg_type, "description": desc}
 
         # Register function metadata and callable
-        Actuator.workflow[self.current_workflow][tool_name] = {
+        ActionSpace.workflow[self.current_workflow][tool_name] = {
             "type": "function",
             "function": {
                 "name": tool_name,
@@ -214,8 +216,8 @@ class Actuator:
                 },
             },
         }
-        Actuator._action_space[self.current_workflow][tool_name] = func
-        print(f"[PROG ACTION SPACE] ADDED {tool_name} TO WORKFLOW: `{self.current_workflow}`")
+        ActionSpace._action_space[self.current_workflow][tool_name] = func
+        # print(f"[PROG ACTION SPACE] ADDED {tool_name} TO WORKFLOW: `{self.current_workflow}`")
 
         @wraps(func)
         def wrapper(*args, **kwargs):
@@ -225,19 +227,24 @@ class Actuator:
 
 class Outbound(ABC):
     @abstractmethod
+    def get_account_pass(self, **kwargs):
+        """ Returns the required credentials to interact with the servicing provider. """
+        return kwargs
+
+    @abstractmethod
     def setup_outbound(self, **kwargs):
-        """ Default setup if external server is not configured."""
+        """ If the required endpoint is not setup, this creates the endpoint. For example, serving LLM model via an endpoint with AWS Sagemaker."""
         return kwargs
 
     @abstractmethod
-    def ping(self, **kwargs):
-        """ Runs checks to ensure the server is alive. """
+    def generate(self, **kwargs):
+        """ Main Invoke message to outbound ruunning caller to provider. """
         return kwargs
 
     @abstractmethod
-    def inference(self, **kwargs):
-        """ Invoke message to outbound / external servers. """
-        return kwargs
+    def end_session(self, **kwargs):
+        """ Default clean up session. """
+        pass
 
 if __name__ == "__main__":
     print("Registered agents sharing the same spine:\n", Spine.registry)

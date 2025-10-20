@@ -17,7 +17,7 @@ from ...utils.settings import settings
 from ..core.pipeline import ChainStage
 from ..core._db import PromptBuilder
 from ..core._skeleton import Spine
-from .records import Session, DATA_SUMMARY_COLS, DATA_SUMMARY_NEW_COLS, MIN_SAMPLE_SIZE, DATA_SUMMARY_TYPE_COLS
+from .records import SessionProfiler, DATA_SUMMARY_COLS, DATA_SUMMARY_NEW_COLS, MIN_SAMPLE_SIZE, DATA_SUMMARY_TYPE_COLS
 
 prompts = settings.agent.stack.prompts
 
@@ -28,7 +28,6 @@ try:
     metaPrompt = PromptBuilder(**prompts['dataset_meta_description'])
     numericTypePrompt = PromptBuilder(**prompts["datatype_numeric"])
     dataTypePrompt = PromptBuilder(**prompts["datatype"])
-
 except Exception as e:
     raise e
 
@@ -50,17 +49,21 @@ class DataSummary(Spine, model_name='base', prompt=describePrompt):
 class DataMetaSummary(Spine, model_name='base', prompt=metaPrompt):
     """Generates detailed descriptions for individual dataset columns."""
 
-    def pre_process(self, data_sample: str, data_label: str):
+    def pre_process(self, data_description: str = "", data_sample: str = "", data_label: str = "", data_samples: str = ""):
         """Formats column data for LLM analysis.
 
         Args:
-            data_sample (str): Column values in markdown format
+            data_description (str): Overall dataset description
+            data_sample (str): Column values in markdown format (legacy parameter)
+            data_samples (str): Column values in markdown format
             data_label (str): Column name
 
         Returns:
             dict: Formatted data with sample values and label
         """
-        return {'data_sample': data_sample, 'data_label': data_label}
+        # Support both old and new parameter names
+        samples = data_samples or data_sample
+        return {'data_description': data_description, 'data_samples': samples, 'data_label': data_label}
 
     def run_loop(self, client: ollama.Client, description: str, data_sample: pd.DataFrame):
         """Generates descriptions for all columns in the dataset.
@@ -172,30 +175,15 @@ class DataTyper(Spine, model_name="base", prompt=dataTypePrompt):
         except Exception as e:
             raise e
 
-##################### OPTIONAL - for tidying the workflow. May be removed in the future.
-
-@dataclass(frozen=True)
-class DataExplorer:
-    """Container for data exploration components."""
-
-    dataDescriber: DataSummary = field(default_factory=DataSummary)
-    metaDescriber: DataMetaSummary = field(default_factory=DataMetaSummary)
-
-@dataclass(frozen=True):
-class DataDriller:
-    dataTyper: DataTyper = field(default_factory=DataTyper)
-
 ##################### 3. Define the Chain Pipeline. Throws an error if `forward` and `validate_stage_output` are not defined.
-
 class DefineDataset(ChainStage):
     """Initial pipeline stage that creates basic dataset statistics and summary."""
 
-    def forward(self, agent: "GabyAgent", session: Session): # pyright: ignore[reportUndefinedVariable]
-        """Creates comprehensive dataset summary with statistics.
+    def forward(self, session: "SessionProfiler"): # pyright: ignore[reportUndefinedVariable]
+        """Initiates the Dataset exploratory process.
 
         Args:
-            agent (GabyAgent): Agent with LLM client and state
-            session (Session): Current session with dataset
+            session (session): Current session with dataset
 
         Returns:
             Result of next pipeline stage
@@ -203,8 +191,9 @@ class DefineDataset(ChainStage):
         Raises:
             ValueError: If session.data_summary is None
         """
-        if session.data_summary is None:
-            raise ValueError("Session Data Summary unavailable. Please define the data_summary in Session before proceeding to this stage.")
+
+        if session.data is None:
+            raise ValueError("Session Data Summary unavailable. Please define the data_summary in session before proceeding to this stage.")
 
         # store original datatypes
         session.data_types = session.data.dtypes.to_dict()
@@ -216,33 +205,37 @@ class DefineDataset(ChainStage):
             "missing_ratio": (session.data.isna().sum() / len(session.data)*100).round(5),
             "unique_count": session.data.nunique()
         })
+        return super().forward(session)
 
-        return super().forward(agent, session)
-
-    def validate_stage_output(self, session: Session):
+    def validate_stage_output(self, session: SessionProfiler):
         """Validates required session attributes are present.
 
         Args:
-            session (Session): Session to validate
+            session (session): session to validate
 
         Raises:
-            ValueError: If required attributes are None
+            ValueError: If required attributes are None.
         """
-        expected_records: list = ['data_summary', 'description']
+
+        expected_records: list = ['data_summary']
 
         for attr in expected_records:
             if getattr(session, attr) is None:
-                raise ValueError(f'Attribute {attr} returned None and is expected to be completed at this stage. ')
+                raise ValueError(f'Expected Attribute {attr} either returned None or missing.')
 
-class DescribeDataset(ChainStage, DataExplorer):
+@dataclass
+class DescribeDataset(ChainStage):
     """Second pipeline stage that generates LLM descriptions for dataset and columns."""
 
-    def forward(self, agent: "GabyAgent", session: Session): # pyright: ignore[reportUndefinedVariable]
+    dataDescriber: DataSummary = field(default_factory=DataSummary)
+    metaDescriber: DataMetaSummary = field(default_factory=DataMetaSummary)
+
+    def forward(self, agent: "GabyAgent", session: SessionProfiler): # pyright: ignore[reportUndefinedVariable]
         """Generates dataset and field-level descriptions using LLM.
 
         Args:
             agent (GabyAgent): Agent with LLM client and state
-            session (Session): Session with data summary
+            session (session): session with data summary
 
         Returns:
             Result of next pipeline stage
@@ -251,7 +244,7 @@ class DescribeDataset(ChainStage, DataExplorer):
             ValueError: If session.data_summary is None
         """
         if session.data_summary is None:
-            raise ValueError("Session Data Summary unavailable. Please define the data_summary in Session before proceeding to this stage.")
+            raise ValueError("session Data Summary unavailable. Please define the data_summary in session before proceeding to this stage.")
 
         # prompt-chain
         session.description = self.dataDescriber.run(agent.client, **{'data_summary': session.data_summary.to_markdown(index=False)})
@@ -263,13 +256,13 @@ class DescribeDataset(ChainStage, DataExplorer):
 
             session.data_summary["description"] = session.data_summary.data_field_name.map(meta_description)
 
-        return super().forward(agent, session)
+        return super().forward(session)
 
-    def validate_stage_output(self, session: Session):
+    def validate_stage_output(self, session: SessionProfiler):
         """Validates data summary contains expected columns.
 
         Args:
-            session (Session): Session to validate
+            session (session): session to validate
 
         Raises:
             ValueError: If columns don't match expected structure
@@ -285,16 +278,21 @@ class DescribeDataset(ChainStage, DataExplorer):
                         f"Data summary columns mismatch. "
                         f"Missing: {list(missing) or 'None'}, Extra: {list(extra) or 'None'}"
                     )
+        else:
+            raise ValueError("Data Summary expected to be returned but is not. In-built problem - pls revise. ")
 
-class DataTyperStage(ChainStage, DataDriller):
+@dataclass
+class DataTyperStage(ChainStage):
     """Pipeline stage for numeric type classification (placeholder implementation)."""
 
-    def forward(self, agent: "GabyAgent", session: Session): # type: ignore
+    dataTyper: DataTyper = field(default_factory=DataTyper)
+
+    def forward(self, agent: "GabyAgent", session: session): # type: ignore
         """Execute numeric type classification.
 
         Args:
             agent (GabyAgent): Agent with LLM client and state
-            session (Session): Session with dataset
+            session (session): session with dataset
         """
 
         if isinstance(session.data_summary, pd.DataFrame):
@@ -305,72 +303,26 @@ class DataTyperStage(ChainStage, DataDriller):
             session.data_summary["_data_types"] = session.data_summary["data_field_name"].map(dataTypes)
             session.data_summary["_data_num_types"] = session.data_summary["data_field_name"].map(dataNumTypes)
 
-        return super().forward(agent, session)
+        return super().forward(session)
 
-    def validate_stage_output(self, session: Session):
+    def validate_stage_output(self, session: SessionProfiler):
         """Validate numeric type classification results.
 
         Args:
-            session (Session): Session to validate
+            session (session): session to validate
         """
 
         if missing := [i for i in DATA_SUMMARY_TYPE_COLS if i not in session.data_summary.columns]: # type: ignore
             raise ValueError(f"Error from running pipeline stage. Expected specific data_summary fields after this pipeline stage but detected missing fields: {missing}")
 
-class DataExplorerPipeline:
-    def __init__(self):
-        self.prompt = DataExplorer()
-        self.dataDescriber = DescribeDataset()
-        self.dataType = DataTyperStage()
 
-        self.reset()
+@dataclass
+class DataExplorer:
+    """ To run, invoke DataExplorerPipeline.pipe.forward(session). """
 
-    def reset(self):
-        if not hasattr(self, 'pipe'):
-            self.pipe = DefineDataset()
+    pipe: DefineDataset = field(default_factory=DefineDataset, init=False)
+    describeData: DescribeDataset = field(default_factory=DescribeDataset, init=False)
+    dataType: DataTyperStage = field(default_factory=DataTyperStage, init=False)
 
-        self.pipe.set_next_stage(self.dataDescriber).set_next_stage(self.dataType)
-
-    def run(self, agent, session: Session):
-        return self.pipe.forward(agent, session)
-
-def demo_setup_pipeline():
-    """Creates the data exploration pipeline: DefineDataset -> DescribeDataset.
-
-    Returns:
-        Generator[DefineDataset]: First stage of the configured pipeline
-
-    TODO: Remove
-    """
-    d1 = DefineDataset()
-    d2 = DescribeDataset()
-    d3 = DataTyperStage()
-
-    d1.set_next_stage(d2).set_next_stage(d3)
-    yield d1
-
-if __name__ == "__main__":
-    import pandas as pd
-    from io import StringIO
-
-    csv_data = StringIO("""
-    user_id,name,age,city,purchases,spend,signup_date
-    1001,Alex,29,Sydney,5,320.50,2023-05-12
-    1002,Jordan,35,Melbourne,3,180.75,2023-07-08
-    1003,Riley,42,Perth,,210.00,2022-11-23
-    1004,Casey,26,Brisbane,8,540.10,2023-02-19
-    1005,Jamie,,Adelaide,2,95.00,2023-08-02
-    1006,Taylor,31,Sydney,7,400.00,2023-01-15
-    1007,Drew,38,,4,310.80,2022-09-30
-    """)
-
-    df = pd.read_csv(csv_data)
-    print(df)
-    session = Session(data=df)
-
-    #data_cleaning = DataCleaning()
-    #data_explore = DataExploration()
-    #data_cleaning.set_next_stage(data_explore)
-    #heart = HeartMonitor()
-    #print(heart.agent)
-    #data_cleaning.forward(heart)
+    def __post_init__(self):
+        self.pipe.set_next_stage(self.describeData).set_next_stage(self.dataType)

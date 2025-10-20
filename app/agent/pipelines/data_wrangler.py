@@ -89,29 +89,29 @@ class Feedback:
     reviseWorker = None
 
 class DataSender(ChainStage):
-    def forward(self, agent, session):
+    def forward(self, session):
         # TODO setup the data upload to hf with session id key . Agent State
-        return super().forward(agent, session)
+        return super().forward(session)
 
     def validate_stage_output(self, session):
         return super().validate_stage_output(session)
 
 class ThoughtCycle(ChainStage, Cycle):
-    def forward(self, agent, session):
+    def forward(self, session):
         # TODO: RUN JUPYTER KERNEL CELL
 
-        from ..core._skeleton import Actuator
+        from ..core._skeleton import ActionSpace
 
-        notebook = Actuator.get_action(workflow_name="jupyter-notebook", function_name="JupyterNotebook")
+        notebook = ActionSpace.get_action(workflow_name="jupyter-notebook", function_name="JupyterNotebook")
 
         code_instruct = self.commander.run(session.history)
-        code_block = self.programmer.run(**{"session_id": agent.session_id, "python_script": code_instruct})
+        code_block = self.programmer.run(**{"session_id": session.id, "python_script": code_instruct})
 
         logs = []
         for item in notebook.run_code(code_block):
             logs.append(item)
-        
-        return super().forward(agent, session)
+
+        return super().forward(session)
 
     def validate_stage_output(self, session):
         return super().validate_stage_output(session)

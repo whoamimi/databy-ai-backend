@@ -5,56 +5,59 @@ Main Gaby agent orchestration with integrated heartbeat monitoring.
 
 """
 
-
-import ollama
+import asyncio
 import logging
 from typing import Literal
+from pydantic import BaseModel, Field
 
 from ..utils.settings import AgentBuild, settings
-from .core import (
-    HeartMonitor,
-    Cognitive
-)
+
+from .core.pipeline import DataPipeline
+from .pipelines.records import SessionProfiler
 from .pipelines.data_explorer import (
-    DefineDataset,
-    DescribeDataset
+    DataExplorer
 )
 
 logger = logging.getLogger("gaby-agent")
 
 logger.info("[Gaby Agent] Gaby Agent has been called.")
 
-class GabyAgent(Cognitive, HeartMonitor):
-    """ Main / Entry point. Interacts with Websocket during FastAPI Serving and as a pckg for debugging tasks. """
+# Agent Handler
+class GabyAgent(BaseModel):
+    state: Literal["idle", "inactive", "active"] = "idle"
+    state_message: str | None = None
+    thinking: str | None = None
+    history: list[tuple] = Field(default_factory=list, init=False)
 
-    def __init__(self, config: AgentBuild = settings.agent, log_level: str = settings.log_level):
-        # config build
-        self.server = config.server
-        self.log_level = log_level
+# Session Handler
+class GabyWindow(SessionProfiler):
+    def __init__(self, build: AgentBuild = settings.agent, **kwargs):
+        super().__init__(**kwargs)
 
-        # AI/ML server / clients. Ollama is used by default for debugging.
-        if self.log_level == "DEBUG":
-            self.client: ollama.Client = ollama.Client(config.server.ollama)
-        else:
-            pass
+        self.build: AgentBuild = build
+        self.agent: GabyAgent = GabyAgent()
+        self.countdown_task: asyncio.Task | None = None
+        self.event: asyncio.Event = asyncio.Event()
 
-        super().__init__(client=self.client)
+    async def state_snapshot(self, message: str):
+        """ Stream state snapshot."""
 
-        logger.info("[Gaby Agent] Agent Cognitive state awoke and ready.")
-        logger.info("[Gaby Agent] Agent Heart Monitor ready.")
+        return {
+            "output": message,
+            "agent": self.agent.model_dump_json()
+        }
 
-    def setup_data_workspace(self):
-        """ Setup datas workspace for agent. """
-
-        pipe = DefineDataset()
-        pipe.set_next_stage(DescribeDataset())
-        self.init_pipe = pipe
-        logger.info("[Gaby Agent] Exploration Pipeline ready.")
-
-    def reset(self):
-        """ Sets up all data pipelines ready for any type of session. """
-        self.setup_data_workspace()
+    @property
+    def services(self):
+        yield from DataPipeline.services
 
 if __name__ == "__main__":
     print("Starting DataBy Agent demo...")
-    pass
+
+    import pandas as pd
+    from uuid import uuid4
+    from datetime import datetime
+
+    data = pd.DataFrame()
+    agent = GabyWindow(data=data, id=uuid4(), created_timestamp=datetime.now())
+    print(agent)

@@ -9,7 +9,9 @@ TODO: revise GabyAgent
 
 import logging
 from abc import ABC, abstractmethod
-from .heartbeat import HeartMonitor
+from collections import OrderedDict
+
+from ..pipelines.records import SessionProfiler
 
 logger = logging.getLogger("databy.agent.pipeline")
 
@@ -22,17 +24,17 @@ class ChainBuilder(ABC):
         pass
 
     @abstractmethod
-    def forward(self, agent: HeartMonitor, session):
+    def forward(self, session: SessionProfiler):
         """Executes the stage logic and forwards to next stage."""
         pass
 
     @abstractmethod
-    def update_agent_state(self, agent: HeartMonitor):
+    def update_agent_state(self, session: SessionProfiler):
         """Updates the agent's state during stage execution."""
         pass
 
     @abstractmethod
-    def validate_stage_output(self, session):
+    def validate_stage_output(self, session: SessionProfiler):
         """Validates the stage output before proceeding."""
         pass
 
@@ -53,7 +55,7 @@ class ChainStage(ChainBuilder):
         self._next_stage = stage
         return stage
 
-    def update_agent_state(self, agent: HeartMonitor):
+    def update_agent_state(self, session: SessionProfiler):
         """Updates agent state to reflect the next stage name.
 
         Args:
@@ -64,8 +66,9 @@ class ChainStage(ChainBuilder):
 
         TODO: Revise this method's functionality.
         """
-        agent.state = f"{str(self._next_stage.__class__.__qualname__)}"
-        return agent
+
+        session.agent.state = f"{str(self._next_stage.__class__.__qualname__)}"
+        return session
 
     @abstractmethod
     def validate_stage_output(self, session):
@@ -77,68 +80,64 @@ class ChainStage(ChainBuilder):
         Returns:
             Session data after validation
         """
-        return session
+        pass
 
     @abstractmethod
-    def forward(self, agent: HeartMonitor, session):
+    def forward(self, session: SessionProfiler):
         """Executes the stage and forwards to next stage if available.
 
         Args:
-            agent (HeartMonitor): Agent with current state
             session: Session data to process
 
         Returns:
             Result from next stage or None if this is the final stage
         """
-        if self._next_stage:
-            # 1. Updates the agent's heart monitor activity for current stage (not next)
-            agent = self.update_agent_state(agent)
-            # 2. Calls the session's validations rules
-            logger.info(f"Agent state updated to: {agent.state}")
-            session = self.validate_stage_output(session)
+
+        # 1. Calls the session's validations rules
+        self.validate_stage_output(session)
+        # 2. Updates the agent's heart monitor activity defined at the current stage
+        session = self.update_agent_state(session)
+        logger.info(f"Agent state updated to: {session.agent.state}")
+
+        if self._next_stage is not None:
             # 3. Calls the next stage
             logger.info(f"Executing next stage: {self._next_stage.__class__.__qualname__}")
-            return self._next_stage.forward(agent, session)
+            return self._next_stage.forward(session)
+        else:
+            logger.info(f"Completed {self.__class__.__qualname__} workflow. Running final report for entire session")
+            # super().validate_stage_output(session)
+            return session
 
-        logger.info(f"Completed {self.__class__.__qualname__} workflow. Running final report for entire session")
-        super().validate_stage_output(session)
+class DataPipeline(ABC):
+    services: OrderedDict = OrderedDict()
 
-        return None
+    def __call__(self, session):
+        """Runs the pipeline workflow."""
 
-class SewageSystem(ABC):
-    @abstractmethod
-    def reset(self, pipeline: ChainStage):
-        """ Rechain the pipeline if required. """
-        pass
+        if not hasattr(self, "pipe") or self.pipe is None:
+            raise RuntimeError(
+                f"No pipeline assigned in {self.__class__.__name__}. "
+                "Call reset(pipeline) or define 'chain' during subclass initialization."
+            )
 
-    @abstractmethod
-    def run(self, session):
-        """ Runs the pipeline / workflow / cycle. """
-        pass
+        return self.pipe.forward(session)
 
+    def __init_subclass__(cls, kwargs):
+        """
+        Automatically build a linked chain of pipeline stages when subclassed.
+        Example:
+            class MyPipeline(DataPipeline, chain=OrderedDict([
+                ("stage1", StageA()),
+                ("stage2", StageB())
+            ])): ...
+        """
+        super().__init_subclass__()
 
-class BasementPipe(SewageSystem):
-    def __init__(self, pipe: ChainStage):
-        """Initialize with an optional pipeline root stage."""
-        self.pipe = pipe
+        for idx, key in enumerate(kwargs):
+            if idx == 0:
+                setattr(cls, "pipe", kwargs[key]())
+            else:
+                setattr(cls, key, kwargs[key]())
+                getattr(cls, "pipe").set_next_stage(getattr(cls, key))
 
-    def reset(self, pipeline: ChainStage):
-        """Rechain the pipeline by assigning the root stage."""
-        self.pipe = pipeline
-        return self.pipe
-
-    def run(self, **kwargs):
-        """Run the pipeline expecting 'agent' and 'session' in kwargs."""
-        try:
-            if self.pipe is None:
-                raise RuntimeError("No pipeline assigned to BasementPipe. Call reset(pipeline) first.")
-
-            agent = kwargs.get("agent")
-            session = kwargs.get("session")
-
-            if agent is None or session is None:
-                raise TypeError("run() requires 'agent' and 'session' keyword arguments.")
-
-            return self.pipe.forward(agent, session)
-        except Exception as e:
-            raise e
+            DataPipeline.services[cls.__qualname__] = cls

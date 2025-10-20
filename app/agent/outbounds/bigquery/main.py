@@ -6,10 +6,10 @@ Script to setup & run Google BigQuery AI/ML Operations.
 """
 
 from utils.settings import settings
-from agent.core._skeleton import Actuator
+from agent.core._skeleton import ActionSpace
 from .queries import SQL_DESCRIBE_DATA_FIELD_LABEL, SQL_DETECT_NUMERIC_FIELD
 
-pandas_gatekeeper = Actuator("pandas-gatekeeper")
+pandas_gatekeeper = ActionSpace("pandas-gatekeeper")
 
 config = settings.agent.cloud.gcloud
 

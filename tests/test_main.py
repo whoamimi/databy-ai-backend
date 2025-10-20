@@ -10,8 +10,7 @@ client = TestClient(app)
 
 TEST_ROOT_GET = {
         "message": "Welcome to" + settings.app_title + "!",
-        "version": settings.app_version,
-        "documentation": settings.docs_endpoint
+        "version": settings.app_version
     }
 
 def test_root_endpoint():
